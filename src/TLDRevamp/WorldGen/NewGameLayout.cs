@@ -29,7 +29,9 @@ namespace TLDRevamp.WorldGen
         /// Labels the game translates (languagetext rewrites them on a language change): the colon the other rows have.
         private static readonly List<TextMeshProUGUI> _colon = new List<TextMeshProUGUI>();
 
-        /// Twice a second while there is no world (the menu): lay the screen out again when its rows changed.
+        /// Twice a second while there is no world (the menu): find the screen, hidden or not, and lay it out — the window
+        /// is laid out before it is first opened. While it shows, Watcher checks it every frame after the game's and the
+        /// mods' Update (LateUpdate, before the frame is drawn), so a row added then never shows in its old place.
         public static void Tick()
         {
             if (!Enabled || Time.unscaledTime < _nextCheck) return;
@@ -37,28 +39,51 @@ namespace TLDRevamp.WorldGen
             if (mainscript.s != null && mainscript.s.player != null) return;
             try
             {
-                if (_content == null) { _content = FindContent(); _signature = 0; _original.Clear(); _colon.Clear(); }
-                if (_content == null || !_content.gameObject.activeInHierarchy) return;
-                foreach (var t in _colon) if (t != null && t.text.Length > 0 && !t.text.EndsWith(":")) t.text += ":";
-                int sig = Signature(_content);
-                if (sig == _signature) return;
-                Apply(_content);
-                _signature = Signature(_content);
+                if (_content == null)
+                {
+                    _content = FindContent(); _signature = 0; _original.Clear(); _colon.Clear();
+                    if (_content != null && _content.GetComponent<Watcher>() == null) _content.gameObject.AddComponent<Watcher>();
+                }
+                if (_content != null) Relayout();
             }
             catch (System.Exception e) { Last = "failed: " + e.Message; }
         }
 
+        private static void Relayout()
+        {
+            foreach (var t in _colon) if (t != null && t.text.Length > 0 && !t.text.EndsWith(":")) t.text += ":";
+            int sig = Signature(_content);
+            if (sig == _signature) return;
+            Apply(_content);
+            _signature = Signature(_content);
+        }
+
+        /// On the screen's row container: when it shows (OnEnable, before its first frame is drawn) and every frame while it
+        /// does (LateUpdate), the layout is checked against the rows there.
+        private sealed class Watcher : MonoBehaviour
+        {
+            private void OnEnable() => LateUpdate();
+            private void LateUpdate()
+            {
+                if (!Enabled || transform != _content) return;
+                try { Relayout(); } catch (System.Exception e) { Last = "failed: " + e.Message; }
+            }
+        }
+
+        /// The new-game screen's row container, also while its window is hidden (Resources: FindObjectsOfType skips
+        /// inactive objects, so before it found the screen only once the window was open, up to half a second late).
         private static Transform FindContent()
         {
-            foreach (var g in Object.FindObjectsOfType<gamemodesettingsscript>())
-                if (g.dropdrops != null && g.dropdrops.Count > 1 && g.dropdrops[1] != null) return g.dropdrops[1].transform.parent;
+            foreach (var g in Resources.FindObjectsOfTypeAll<gamemodesettingsscript>())
+                if (g != null && g.gameObject.scene.IsValid() && g.dropdrops != null && g.dropdrops.Count > 1 && g.dropdrops[1] != null)
+                    return g.dropdrops[1].transform.parent;
             return null;
         }
 
         /// What can change the layout: the rows there and which of them show.
         private static int Signature(Transform content)
         {
-            int h = content.childCount;
+            int h = content.childCount * 2 + (content.gameObject.activeInHierarchy ? 1 : 0);   // shown: the labels' x is known
             for (int i = 0; i < content.childCount; i++)
             {
                 var c = content.GetChild(i);
@@ -103,12 +128,18 @@ namespace TLDRevamp.WorldGen
 
             // the check boxes: from where the biome row starts, one under the other, at the map label's left edge
             float y = Original(biome).y;
-            float x = label != null ? LeftIn(content, label) : Original(toggles.Count > 0 ? toggles[0] : biome).x;
+            // x from the panel's RIGHT edge, as the rows hang from it: the map label's left edge there is the map row's own
+            // geometry (the dropdown's fixed width and its label), so it is right while the window is hidden too — the panel
+            // is 0 wide until its first frame shown, and a left-edge position measured then put the boxes 740 px off
+            bool fromRight = label != null;
+            float x = fromRight ? map.anchoredPosition.x + label.rectTransform.localPosition.x + label.rectTransform.rect.xMin
+                                : Original(toggles.Count > 0 ? toggles[0] : biome).x;
             foreach (var t in new[] { "TogglePeaceful", "ToggleSurvival", "ToggleHomesick" })
             {
                 var rt = toggles.Find(r => r.name == t);
                 if (rt == null) continue;
                 Original(rt);
+                if (fromRight) rt.anchorMin = rt.anchorMax = new Vector2(1f, 1f);
                 if (!rt.gameObject.activeSelf) { rt.anchoredPosition = new Vector2(x, y); continue; }   // hidden: kept in step, takes no row
                 rt.anchoredPosition = new Vector2(x, y);
                 y -= ToggleStep;
@@ -158,15 +189,6 @@ namespace TLDRevamp.WorldGen
                 if (t.transform.parent == map) return t;
             }
             return null;
-        }
-
-        /// The x a left-anchored row in `content` needs for its left edge to be at the label's text.
-        private static float LeftIn(Transform content, TextMeshProUGUI label)
-        {
-            var corners = new Vector3[4];
-            label.rectTransform.GetWorldCorners(corners);
-            float left = ((RectTransform)content).InverseTransformPoint(corners[0]).x;
-            return left - ((RectTransform)content).rect.xMin;
         }
 
         /// The row's label laid out like the map row's: the game's biome row has one ("Biome") but 500 wide, so its text
