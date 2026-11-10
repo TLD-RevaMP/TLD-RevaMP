@@ -5,16 +5,17 @@ using UnityEngine.UI;
 
 namespace TLDRevamp
 {
-    /// Mods and Revamp on the game's main menu (asked for 2026-11-11): one row of two half-width buttons right under
-    /// Settings, cloned from the game's own Settings button (same sprite, font and sound); Exit moves down a row to keep
-    /// the column's spacing. Mods opens the mod browser over the menu; Revamp opens the settings on the Revamp tab.
-    /// A menu laid out otherwise (no Settings or Exit button where the game has them) is left as it is.
+    /// Mods on the game's main menu (asked for 2026-11-11): a button against Settings' right edge, the way the gear
+    /// sits against START, cloned from the game's own Settings button (same sprite, font and sound). It opens the mod
+    /// browser over the menu. Nothing else moves: a row under Settings pushed Exit below the bottom of a 16:9 screen.
+    /// (The Revamp settings are in Settings, so there is no Revamp button here.) A menu without a Settings button is
+    /// left as it is.
     [HarmonyPatch]
     public static class MainMenuButtons
     {
         public static bool Enabled = true;   // A/B (bridge `set`, next menu): false = the game's menu as it was
-        public const string ModsName = "ButtonRevampMods", RevampName = "ButtonRevampTab";
-        public const float Gap = 10f, FontSize = 44f;
+        public const string ModsName = "ButtonRevampMods";
+        public const float Width = 160f, FontSize = 44f;
         public static string Last = "not built";
 
         [HarmonyPatch(typeof(menuhandler), "Start")]
@@ -31,22 +32,12 @@ namespace TLDRevamp
             try
             {
                 var settings = Find(menu.transform, "ButtonSettings");
-                var exit = settings != null && settings.parent != null ? settings.parent.Find("ButtonExit") as RectTransform : null;
-                if (settings == null || exit == null) { Last = "the main menu has no Settings or Exit button: left as it is"; return; }
-                var parent = settings.parent;
-                if (parent.Find(ModsName) != null) { Last = "built"; return; }
-
-                // the row under Settings, as far below it as Settings is below Load (the game's spacing)
-                var load = Find(menu.transform, "ButtonLoad");
-                float step = load != null ? Mathf.Abs(WorldY(load) - WorldY(settings)) / Mathf.Max(0.0001f, settings.lossyScale.y) : 130f;
-                if (step < 100f || step > 200f) step = 130f;
-                float half = (settings.sizeDelta.x - Gap) / 2f;
-                var row = settings.anchoredPosition - new Vector2(0f, step);
-                Clone(settings, ModsName, "Mods", row, half, () => Net.ModsScreen.Open(null));
-                Clone(settings, RevampName, "Revamp", row + new Vector2(half + Gap, 0f), half, () => OpenRevampTab(menu));
-                // Exit keeps the gap it had under Settings, one row lower
-                exit.anchoredPosition -= new Vector2(0f, step);
-                Last = "built: Mods and Revamp under Settings, Exit one row lower";
+                if (settings == null || settings.parent == null) { Last = "the main menu has no Settings button: left as it is"; return; }
+                if (settings.parent.Find(ModsName) != null) { Last = "built"; return; }
+                // against Settings' right edge, its height: as the gear against START
+                var at = settings.anchoredPosition + new Vector2(settings.sizeDelta.x * (1f - settings.pivot.x), 0f);
+                Clone(settings, ModsName, "Mods", at, Width, () => Net.ModsScreen.Open(null));
+                Last = "built: Mods next to Settings";
                 Plugin.Log.LogInfo("MainMenuButtons: " + Last);
             }
             catch (System.Exception e) { Last = "failed: " + e.Message; Plugin.Log.LogWarning("MainMenuButtons: " + e.Message); }
@@ -75,20 +66,11 @@ namespace TLDRevamp
             b.onClick.AddListener(() => { try { click(); } catch (System.Exception e) { Plugin.Log.LogWarning("MainMenuButtons: " + e.Message); } });
         }
 
-        /// The game's settings, opened as its Settings button does, then on the Revamp tab.
-        private static void OpenRevampTab(menuhandler menu)
-        {
-            menu.PressedSettings();
-            var s = settingsscript.s != null ? settingsscript.s : Object.FindObjectOfType<settingsscript>();
-            if (s != null) s.PressedTab(RevampMenu.TabIndex);
-        }
-
         private static RectTransform Find(Transform root, string name)
         {
             foreach (var t in root.GetComponentsInChildren<RectTransform>(true)) if (t.name == name) return t;
             return null;
         }
 
-        private static float WorldY(RectTransform t) => t.position.y;
     }
 }

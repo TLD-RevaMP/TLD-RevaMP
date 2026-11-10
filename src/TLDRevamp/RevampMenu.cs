@@ -154,30 +154,7 @@ namespace TLDRevamp
             if (isr.verticalScrollbar != null) isr.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
             SetInfo(ui, DefaultInfo);
 
-            // --- rows
-            // Browse on demand; opening settings alone never makes a network request (the start-up update check is ModsScreen's).
-            var mods = Object.Instantiate(reset.gameObject, content);
-            mods.name = "ButtonMods";
-            Place(mods, 0f, -40f, 900f, 80f);
-            mods.GetComponentInChildren<TextMeshProUGUI>().text = "Mods";
-            var mb = mods.GetComponent<Button>(); mb.onClick = new Button.ButtonClickedEvent();
-            mb.onClick.AddListener(() => Net.ModsScreen.Open(root.gameObject));
-            AddHover(ui, mods, "<b>Mods</b>\n\nBrowse approved single-file mods. Install, update, enable, disable or remove, then restart the game. Updates keep disabled mods disabled.\n\nThe catalog is fetched when you open Mods or press Refresh, and once at start to look for updates (Check for mod updates at start, below). Downloads must match the approved files shipped with your RevaMP version. Mods installed by hand stay under your control.");
-            var marks = Object.Instantiate(reset.gameObject, content);
-            marks.name = "ButtonMarks"; Place(marks, 0f, -140f, 900f, 80f);
-            var markText = marks.GetComponentInChildren<TextMeshProUGUI>();
-            ui.Refreshers.Add(() => markText.text = "Session marks (" + Plugin.KeyName(Plugin.KeyMark) + ")");
-            var markButton = marks.GetComponent<Button>(); markButton.onClick = new Button.ButtonClickedEvent();
-            markButton.onClick.AddListener(() => MarkPanel.Open());
-            AddHover(ui, marks, "Save a note with recent game state, browse this session's marks, edit notes or generate a comparison. Enter saves; Escape cancels. Change the Mark key in BepInEx/config/tldrevamp.core.cfg, alongside DebugReport.");
-            var bug = Object.Instantiate(reset.gameObject, content);
-            bug.name = "ButtonBugReport"; Place(bug, 0f, -240f, 900f, 80f);
-            var bugText = bug.GetComponentInChildren<TextMeshProUGUI>();
-            ui.Refreshers.Add(() => bugText.text = "Report a bug (" + Plugin.KeyName(Plugin.KeyRepro) + " or /bug)");
-            var bugButton = bug.GetComponent<Button>(); bugButton.onClick = new Button.ButtonClickedEvent();
-            bugButton.onClick.AddListener(() => MarkPanel.Open(true));
-            AddHover(ui, bug, "<b>Report a bug</b>\n\nWrite what went wrong (optional) and press Enter. Saves one bundle in BepInEx/tldrevamp-feedback: the report, your recorded actions and the world save the session started from. A banner shows while it records and when the bundle is saved. The bundle stays on your computer until you send it.");
-            ui.MainOnly.Add(mods); ui.MainOnly.Add(marks); ui.MainOnly.Add(bug);
+            // --- rows (the mod browser is on the main menu, next to Settings; session marks and bug reports have their keys)
             // a section page's way back, where the buttons on top are on the main page
             var back = ui.Back = Object.Instantiate(reset.gameObject, content);
             back.name = "ButtonBack"; Place(back, 0f, -40f, 900f, 80f);
@@ -197,14 +174,14 @@ namespace TLDRevamp
                 if (e.Kind != RevampSettings.Kind.Header || sizes[e.Label] <= InlineMax) continue;
                 var sb = Object.Instantiate(reset.gameObject, content);
                 sb.name = "Section_" + e.Label;
-                sb.GetComponentInChildren<TextMeshProUGUI>().text = e.Label + "...";
+                sb.GetComponentInChildren<TextMeshProUGUI>().text = e.Label;
                 var sbb = sb.GetComponent<Button>(); sbb.onClick = new Button.ButtonClickedEvent();
                 string page = e.Label;
                 sbb.onClick.AddListener(() => ShowPage(ui, page));
                 AddHover(ui, sb, "<b>" + e.Label + "</b>\n\n" + e.Help);
                 ui.SectionButtons.Add(new KeyValuePair<string, GameObject>(page, sb));
             }
-            float y = -350f;
+            float y = -40f;   // the section buttons from the top
             ui.Content = (RectTransform)content; ui.RowsTop = y;
             string section = "";
             Built.RemoveAll(u => u.Tab == null); Built.Add(ui);

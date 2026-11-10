@@ -119,8 +119,8 @@ Joining loads the host's world and never touches the joiner's own saves. The hos
 While the join loads, a muted loading screen covers the game and shows each stage and the object counts, until the
 host's world and the nearby terrain, roads, ground and shared objects are really there
 (`src/TLDRevamp/Net/JoinLoading.cs`). **Escape** cancels the join. After 60 seconds without progress the screen offers
-*Continue anyway* as well as *Cancel*. The screen is on by default and can be turned off under
-**Settings → Revamp → Multiplayer → Loading screen when joining**.
+*Continue anyway* as well as *Cancel*. The screen is always on (tests can switch it with the bridge:
+`set TLDRevamp.Net.JoinLoading.Enabled False`).
 
 ### The join checks
 
