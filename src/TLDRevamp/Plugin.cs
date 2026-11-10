@@ -95,7 +95,12 @@ namespace TLDRevamp
         {
             try
             {
-                var bytes = System.IO.File.ReadAllBytes(typeof(mainscript).Assembly.Location);
+                // The file in the game's Managed folder, not the loaded assembly's Location: when a BepInEx patcher
+                // targets Assembly-CSharp (RevaMP's own LoaderAliases does) the game is loaded from patched bytes in
+                // memory and Location is empty — every machine was "unknown" and every join refused (2026-11-10).
+                string path = System.IO.Path.Combine(BepInEx.Paths.ManagedPath, "Assembly-CSharp.dll");
+                if (!System.IO.File.Exists(path)) path = typeof(mainscript).Assembly.Location;
+                var bytes = System.IO.File.ReadAllBytes(path);
                 using (var sha = System.Security.Cryptography.SHA256.Create())
                     return System.BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "").Substring(0, 12).ToLowerInvariant();
             }
