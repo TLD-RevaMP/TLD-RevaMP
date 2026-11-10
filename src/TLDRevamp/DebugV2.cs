@@ -61,6 +61,7 @@ namespace TLDRevamp
             new Kind { Id = "ghosts", Name = "Owner ghosts", Lines = new string[0], LineNames = new string[0] },
             new Kind { Id = "links", Name = "Links", Lines = new string[0], LineNames = new string[0] },
             new Kind { Id = "health", Name = "Item health", Lines = new string[0], LineNames = new string[0] },
+            new Kind { Id = "attach", Name = "Attach boxes", Lines = new string[0], LineNames = new string[0] },
             new Kind { Id = "options", Name = "Options", Lines = new string[0], LineNames = new string[0] },
         };
 
@@ -69,6 +70,7 @@ namespace TLDRevamp
             foreach (var p in _cfg.panels) if (p.id == id) return p;
             var n = new PanelCfg { id = id };
             if (id == "tabs") n.border = 2;
+            if (id == "attach") n.shown = false;   // a tool for one job, not part of the everyday overlay
             _cfg.panels.Add(n); return n;
         }
         internal static bool Has(string id) => Active && Get(id).shown;
@@ -401,6 +403,11 @@ namespace TLDRevamp
                 }
                 ry += line * 1.2f;
                 GUI.Label(new Rect(rx + 26 * s, ry, rw - 26 * s, line * 2), "Smaller is finer placement; sizes are at 1080p and scale with the screen.", body);
+                return;
+            }
+            if (_selected == "attach")
+            {
+                GUI.Label(new Rect(rx, ry, rw, line * 6), "Wire boxes on every part slot near you (blue: empty). With a part in hand: its scan sphere (a bolted part attaches when a slot box that takes it is inside the sphere around the part's own origin, wherever you look), green = the box it attaches to now, yellow = takes it but out of reach, with the gap in metres.", OverlayStyle.Wrap);
                 return;
             }
             if (_selected == "health")

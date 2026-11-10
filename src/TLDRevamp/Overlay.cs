@@ -96,7 +96,7 @@ namespace TLDRevamp
             DebugV2.AfterArrange();
             if (ItemHealth.Open && ItemHealth.Box.width > 0) DebugLayout.Labels.Reserve(new DebugBox(ItemHealth.Box.x, ItemHealth.Box.y, ItemHealth.Box.width, ItemHealth.Box.height));
             _toastBar.Draw(DebugLayout.Toast); _noticeBar.Draw(DebugLayout.Notice, OverlayKind.Muted);
-            WorldOverlays.Draw(); ItemTrafficLabels.Draw();
+            WorldOverlays.Draw(); ItemTrafficLabels.Draw(); AttachBoxes.Draw();
             _packetTable.Draw(DebugLayout.Packets);
             if (ShowWip) WipMark.Draw();
             if (DebugLayout.Performance.H > 0)
