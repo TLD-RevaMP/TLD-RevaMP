@@ -77,7 +77,7 @@ try
                 Console.WriteLine(JsonSerializer.Serialize(copies.Select(c =>
                 {
                     var identity = c.InstalledIdentity();
-                    return new { c.Name, Kind = c.KindLabel, c.LaunchOptions, c.RevampVersion, c.RevampSource, c.Commit, InstalledCommit = identity.Commit, InstalledDirty = identity.Dirty, identity.LabelDiffers, c.SourceRef, c.UpdateBeforeLaunch, c.NewerCommits, c.GameBuildId, c.GameBranch, c.Bridge, Dir = c.Dir, c.Compat, Running = Launcher.IsRunning(c), c.SizeBytes, c.OwnBytes, c.LastLaunched };
+                    return new { c.Name, Kind = c.KindLabel, c.LaunchOptions, c.RevampVersion, c.RevampSource, c.Commit, InstalledCommit = identity.Commit, InstalledDirty = identity.Dirty, identity.LabelDiffers, c.SourceRef, c.UpdateBeforeLaunch, c.NewerCommits, c.GameBuildId, c.GameBranch, c.Bridge, Dir = c.Dir, c.Compat, Running = Launcher.IsRunning(c), c.SizeBytes, c.OwnBytes, c.LastLaunched, SecondAccountBehind = SecondAccount.Supported(c) ? SecondAccount.Behind(c) : null };
                 }), new JsonSerializerOptions { WriteIndented = true }));
                 return 0;
             }

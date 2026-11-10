@@ -57,6 +57,34 @@ public sealed class SecondAccountTests : IDisposable
     }
 
     [Fact]
+    public void BehindWhenTheCopyChangesAfterTheSecondGameStarted()
+    {
+        var c = Copy();
+        Assert.Null(SecondAccount.Behind(c));   // never started on the second account: nothing to be behind
+        SecondAccount.Mirror(c, _ => { });
+        Assert.Null(SecondAccount.Behind(c));
+
+        // the copy rebuilt (new RevaMP DLL), the second game not started since
+        var dll = Path.Combine(c.GameDir, "BepInEx", "plugins", "TLDRevamp", "TLDRevamp.dll");
+        File.WriteAllText(dll, "revamp rebuilt");
+        File.SetLastWriteTimeUtc(dll, DateTime.UtcNow.AddMinutes(5));
+        Assert.Contains("RevaMP", SecondAccount.Behind(c));
+        SecondAccount.Mirror(c, _ => { });
+        Assert.Null(SecondAccount.Behind(c));
+
+        // an add-on added to the copy
+        Put(Path.Combine(c.GameDir, "BepInEx", "plugins", "TerrainChoice", "TerrainChoice.dll"), "add-on");
+        Assert.Equal("its BepInEx or mods differ from this copy's", SecondAccount.Behind(c));
+        SecondAccount.Mirror(c, _ => { });
+        Assert.Null(SecondAccount.Behind(c));
+
+        // the second game's own settings and log don't count
+        Put(Path.Combine(SecondAccount.GameDir(c), "BepInEx", "config", "revamp.cfg"), "second account's settings");
+        Put(Path.Combine(SecondAccount.GameDir(c), "BepInEx", "LogOutput.log"), "its log");
+        Assert.Null(SecondAccount.Behind(c));
+    }
+
+    [Fact]
     public void TheSecondGameKeepsItsSavesApartFromTheCopys()
     {
         var c = Copy();

@@ -93,6 +93,8 @@ public static class Launcher
         c.LastLaunched = DateTime.UtcNow;
         c.Save();
         log($"Started '{c.Name}' ({Builder.Describe(c)})" + (opts.IsEmpty ? "" : $"; launch options: {opts.Describe()}"));
+        if (SecondAccount.Supported(c) && SecondAccount.IsRunning(c) && SecondAccount.Behind(c) is { } behind)
+            log($"  warning: the second account's game is behind this copy ({behind}): stop it and launch it again on the 2nd account");
         return p;
     }
 

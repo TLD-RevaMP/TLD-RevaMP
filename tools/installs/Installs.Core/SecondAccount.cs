@@ -59,6 +59,50 @@ public static class SecondAccount
         log($"  second game matches '{c.Name}' ({Builder.Describe(c)})");
     }
 
+    /// <summary>How the second game's install differs from the copy's now, or null when it matches (or was never started).
+    /// The mirror is only made when the second game starts, so a copy rebuilt or given other mods since then leaves the
+    /// second game on the old ones: multiplayer between the two then refuses (other build) or misbehaves (other mods).
+    /// Mirror copies BepInEx's core/plugins/patchers exactly with their write times, so size + write time per file tells.</summary>
+    public static string? Behind(CopyInfo c)
+    {
+        if (!File.Exists(Exe(c))) return null;
+        string Bep(string game, params string[] rel) => Path.Combine([game, "BepInEx", .. rel]);
+        string mine = GameDir(c), copy = c.GameDir;
+        bool revamp = !SameFiles(Bep(copy, "plugins", "TLDRevamp"), Bep(mine, "plugins", "TLDRevamp")) ||
+                      !SameFiles(Bep(copy, "patchers", "TLDRevamp"), Bep(mine, "patchers", "TLDRevamp"));
+        if (revamp)
+        {
+            string theirs = BuildLabel(Bep(copy, "plugins", "TLDRevamp", "TLDRevamp.dll")), ours = BuildLabel(Bep(mine, "plugins", "TLDRevamp", "TLDRevamp.dll"));
+            return ours != theirs ? $"it has RevaMP {ours}, this copy {theirs}" : "it has a different RevaMP build than this copy";
+        }
+        return new[] { "core", "plugins", "patchers" }.All(rel => SameFiles(Bep(copy, rel), Bep(mine, rel))) ? null
+            : "its BepInEx or mods differ from this copy's";
+    }
+
+    static string BuildLabel(string dll)
+    {
+        if (!File.Exists(dll)) return "none";
+        try
+        {
+            var id = SourceBuild.Identity(dll);
+            return id.Commit is { } sha ? sha[..7] + (id.Dirty ? " (local changes)" : "") : "a local build";
+        }
+        catch (Exception e) when (e is IOException or BadImageFormatException or UnauthorizedAccessException or InvalidOperationException) { return "an unreadable build"; }
+    }
+
+    /// <summary>Same files (relative path, size, write time) in both folders; two missing folders count as the same.</summary>
+    internal static bool SameFiles(string a, string b)
+    {
+        static List<(string, long, DateTime)> List(string dir) => !Directory.Exists(dir) ? [] :
+            Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories)
+                .Select(f => new FileInfo(f))
+                .Select(f => (Path.GetRelativePath(dir, f.FullName).ToLowerInvariant(), f.Length, f.LastWriteTimeUtc))
+                .OrderBy(x => x.Item1, StringComparer.Ordinal).ToList();
+        if (Directory.Exists(a) != Directory.Exists(b)) return false;
+        try { return List(a).SequenceEqual(List(b)); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return true; }   // can't tell: no false alarm
+    }
+
     /// <summary>Start the second game in the box: its Steam first (signed in), then the game. Returns once the game runs.</summary>
     public static void Launch(Store store, CopyInfo c, Action<string> log, int monitor = 0)
     {

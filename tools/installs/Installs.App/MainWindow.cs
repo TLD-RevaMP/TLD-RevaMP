@@ -291,6 +291,13 @@ public sealed class MainWindow : Window
         head.FontWeight = FontWeight.SemiBold;
         if (on) Res(head, TextBlock.ForegroundProperty, "Ok");
         s.Children.Add(head);
+        if (SecondAccount.Behind(c) is { } behind)
+        {
+            var w = new TextBlock { FontSize = 12, TextWrapping = TextWrapping.Wrap,
+                Text = $"Behind this copy: {behind}. " + (on ? "Stop it and launch it again to bring it up to date." : "Launching it on the 2nd account brings it up to date.") };
+            Res(w, TextBlock.ForegroundProperty, "Warn");
+            s.Children.Add(w);
+        }
         if (sandboxie == null)
         {
             s.Children.Add(Muted("Install Sandboxie-Plus (sandboxie-plus.com) to run this copy a second time, on another Steam account.", 12));
@@ -466,7 +473,7 @@ public sealed class MainWindow : Window
         rootText.Text = store.Root;
         steamText.Text = steam == null ? "Steam's game: not found"
             : $"Steam's game: {steamBranch ?? "unknown"} branch, build {steamBuild ?? "?"} · Steam {(Steam.ClientRunning() ? "running" : "not running (start it to launch a copy)")}";
-        var sig = string.Join("|", copies.Select(c => $"{c.Name}:{c.Kind}:{c.GameBranch}:{c.GameBuildId}:{c.Updated}:{c.LastLaunched}:{c.SizeBytes}:{running.Contains(c.Name)}:{running2.Contains(c.Name)}:{c.LaunchOptions}:{(c.HasRevamp ? c.InstalledSourceLabel : "")}")) + $"|{busy}|{steamBranch}|{steamBuild}|{releases.Count}";
+        var sig = string.Join("|", copies.Select(c => $"{c.Name}:{c.Kind}:{c.GameBranch}:{c.GameBuildId}:{c.Updated}:{c.LastLaunched}:{c.SizeBytes}:{running.Contains(c.Name)}:{running2.Contains(c.Name)}:{c.LaunchOptions}:{(c.HasRevamp ? c.InstalledSourceLabel : "")}:{(SecondAccount.Supported(c) ? SecondAccount.Behind(c) : "")}")) + $"|{busy}|{steamBranch}|{steamBuild}|{releases.Count}";
         if (!force && sig == signature) return;
         signature = sig;
         cards.Children.Clear();
