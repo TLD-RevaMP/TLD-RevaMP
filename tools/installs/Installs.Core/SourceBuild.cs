@@ -317,7 +317,7 @@ public sealed class SourceBuild
 
     public static readonly string[] ManagedLibs = {
         "Assembly-CSharp", "com.rlabrecque.steamworks.net", "Unity.TextMeshPro", "UnityEngine", "UnityEngine.CoreModule",
-        "UnityEngine.AudioModule", "UnityEngine.AnimationModule", "UnityEngine.ImageConversionModule", "UnityEngine.IMGUIModule",
+        "UnityEngine.AudioModule", "UnityEngine.AnimationModule", "UnityEngine.AssetBundleModule", "UnityEngine.ImageConversionModule", "UnityEngine.IMGUIModule",
         "UnityEngine.InputLegacyModule", "UnityEngine.JSONSerializeModule", "UnityEngine.ParticleSystemModule", "UnityEngine.PhysicsModule",
         "UnityEngine.ScreenCaptureModule", "UnityEngine.TerrainModule", "UnityEngine.TextRenderingModule", "UnityEngine.UI", "UnityEngine.UIModule",
         "UnityEngine.VehiclesModule", "UnityEngine.VideoModule", "UnityEngine.UnityWebRequestModule" };

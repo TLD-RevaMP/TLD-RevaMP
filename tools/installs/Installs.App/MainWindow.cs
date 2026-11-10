@@ -206,7 +206,11 @@ public sealed class MainWindow : Window
             var reference = new TextBox { Text = c.SourceRef, Watermark = "branch or commit SHA", FontSize = 12, IsEnabled = !busy && !isRunning };
             s.Children.Add(reference);
             var build = Btn("Build"); build.IsEnabled = !busy && !isRunning;
-            build.Click += async (_, _) => await Job($"Building {c.Name}", log => new Builder(store, log).Build(c.Name, reference.Text?.Trim()));
+            build.Click += async (_, _) =>
+            {
+                var r = reference.Text?.Trim(); // read on the UI thread: the job runs on the thread pool
+                await Job($"Building {c.Name}", log => new Builder(store, log).Build(c.Name, r));
+            };
             s.Children.Add(build);
         }
         var game = Muted(c.GameLabel, 12);
