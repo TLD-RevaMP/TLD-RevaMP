@@ -225,6 +225,23 @@
           "size": 19500
         }
       ]
+    },
+    {
+      "id": "anonymoustld.rossa88",
+      "name": "Rossa88",
+      "author": "YujiroX2",
+      "description": "A late-80s mid-engined sports car with pop-up headlights and a full interior, built on the game's Car07. F1 menu: Rossa88Full. Every player needs it.",
+      "source": "https://github.com/TLD-RevaMP/TLD-Mods/tree/main/mods/Rossa88",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/rossa88-v0.1.0/Rossa88-0.1.0.zip",
+          "file": "BepInEx/plugins/Rossa88/Rossa88.dll",
+          "sha256": "ae69343a8c5a8331e92a109a11e32766e75894b80f3f46bcf57c860fbbfba4d2",
+          "size": 1635649,
+          "revamp": "0.69.1"
+        }
+      ]
     }
   ]
 }
