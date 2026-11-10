@@ -18,10 +18,19 @@ namespace TLDRevamp
         public const int TabIndex = 90;
         // Per settings menu instance (the game can have more than one: main menu scene, game scene)
         private sealed class Ui { public GameObject Tab, LedOn; public TextMeshProUGUI Info; public ScrollRect InfoScroll; public readonly List<System.Action> Refreshers = new List<System.Action>();
-            public readonly List<Row> Rows = new List<Row>(); public RectTransform Content; public float RowsTop; }
+            public readonly List<Row> Rows = new List<Row>(); public RectTransform Content; public float RowsTop;
+            /// The section shown (its header's label), or null: the main page - the buttons on top, one button per section
+            /// in two columns, and the sections of a single setting in full (like Minecraft's options, 2026-11-11).
+            public string Page; public TextMeshProUGUI Title; public GameObject Back;
+            public readonly List<GameObject> MainOnly = new List<GameObject>();
+            public readonly List<KeyValuePair<string, GameObject>> SectionButtons = new List<KeyValuePair<string, GameObject>>(); }
         /// A settings row and where it goes: rows an entry hides (RevampSettings.Entry.Visible: Debugging Legacy or V2)
         /// leave no gap — Layout places the shown ones top to bottom again after every change.
-        private sealed class Row { public GameObject Go; public RevampSettings.Entry Entry; public float X, Before, After; public bool Header, Button; }
+        private sealed class Row { public GameObject Go; public RevampSettings.Entry Entry; public float X, Before, After; public bool Header, Button, Inline; public string Section; }
+        /// A section of at most this many settings stays on the main page instead of getting a button of its own.
+        public static int InlineMax = 1;
+        /// A/B (bridge `set`): false = every section in one long list (before 2026-11-11).
+        public static bool Submenus = true;
         private static readonly List<Ui> Built = new List<Ui>();
         /// After a change made outside the tab (a key captured): every built Revamp tab shows the new values.
         internal static void RefreshOpen() { foreach (var ui in Built) if (ui.Tab != null) Refresh(ui); }
@@ -49,6 +58,7 @@ namespace TLDRevamp
             bool open = _i == TabIndex;
             if (open)
             {
+                ui.Page = null;   // a fresh tab opens on its main page
                 Refresh(ui);
                 var sr = ui.Tab.GetComponentInChildren<ScrollRect>(true);
                 if (sr != null) sr.verticalNormalizedPosition = 1f; // open at the top, like a fresh tab
@@ -95,7 +105,8 @@ namespace TLDRevamp
             var toggleTpl = content.Find("ToggleAutoSave").gameObject;
             var choiceTpl = content.Find("DropdownLUT").gameObject;
             StripGameHooks(ui.Tab);
-            bg.Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text = "Revamp";
+            ui.Title = bg.Find("Text (TMP)").GetComponent<TextMeshProUGUI>();
+            ui.Title.text = "Revamp";
             var reset = bg.Find("ButtonReset");
             if (reset != null)
             {
@@ -166,8 +177,36 @@ namespace TLDRevamp
             var bugButton = bug.GetComponent<Button>(); bugButton.onClick = new Button.ButtonClickedEvent();
             bugButton.onClick.AddListener(() => MarkPanel.Open(true));
             AddHover(ui, bug, "<b>Report a bug</b>\n\nWrite what went wrong (optional) and press Enter. Saves one bundle in BepInEx/tldrevamp-feedback: the report, your recorded actions and the world save the session started from. A banner shows while it records and when the bundle is saved. The bundle stays on your computer until you send it.");
+            ui.MainOnly.Add(mods); ui.MainOnly.Add(marks); ui.MainOnly.Add(bug);
+            // a section page's way back, where the buttons on top are on the main page
+            var back = ui.Back = Object.Instantiate(reset.gameObject, content);
+            back.name = "ButtonBack"; Place(back, 0f, -40f, 900f, 80f);
+            back.GetComponentInChildren<TextMeshProUGUI>().text = "Back";
+            var backButton = back.GetComponent<Button>(); backButton.onClick = new Button.ButtonClickedEvent();
+            backButton.onClick.AddListener(() => ShowPage(ui, null));
+            AddHover(ui, back, "<b>Back</b>\n\nTo the Revamp tab's main page and its sections.");
+            back.SetActive(false);
+            // how many settings each section has: one button per section with more than InlineMax
+            var sizes = new Dictionary<string, int>();
+            string counting = "";
+            foreach (var e in RevampSettings.Entries)
+                if (e.Kind == RevampSettings.Kind.Header) { counting = e.Label; sizes[counting] = 0; }
+                else if (sizes.ContainsKey(counting)) sizes[counting]++;
+            foreach (var e in RevampSettings.Entries)
+            {
+                if (e.Kind != RevampSettings.Kind.Header || sizes[e.Label] <= InlineMax) continue;
+                var sb = Object.Instantiate(reset.gameObject, content);
+                sb.name = "Section_" + e.Label;
+                sb.GetComponentInChildren<TextMeshProUGUI>().text = e.Label + "...";
+                var sbb = sb.GetComponent<Button>(); sbb.onClick = new Button.ButtonClickedEvent();
+                string page = e.Label;
+                sbb.onClick.AddListener(() => ShowPage(ui, page));
+                AddHover(ui, sb, "<b>" + e.Label + "</b>\n\n" + e.Help);
+                ui.SectionButtons.Add(new KeyValuePair<string, GameObject>(page, sb));
+            }
             float y = -350f;
             ui.Content = (RectTransform)content; ui.RowsTop = y;
+            string section = "";
             Built.RemoveAll(u => u.Tab == null); Built.Add(ui);
             var toggleLabel = toggleTpl.transform.Find("ToggleBackground/ToggleLabel").GetComponent<TextMeshProUGUI>();
             foreach (var e in RevampSettings.Entries)
@@ -175,6 +214,7 @@ namespace TLDRevamp
                 switch (e.Kind)
                 {
                     case RevampSettings.Kind.Header:
+                        section = e.Label;
                         y -= 30f;
                         var h = new GameObject("Header", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
                         h.transform.SetParent(content, false);
@@ -184,7 +224,7 @@ namespace TLDRevamp
                         Place(h, 0f, y, 900f, 70f);
                         AddHover(ui, h, "<b>" + e.Label + "</b>\n\n" + e.Help);
                         y -= 100f;
-                        ui.Rows.Add(new Row { Go = h, Entry = e, X = 0f, Before = 30f, After = 100f, Header = true });
+                        ui.Rows.Add(new Row { Go = h, Entry = e, X = 0f, Before = 30f, After = 100f, Header = true, Section = section, Inline = !sizes.ContainsKey(section) || sizes[section] <= InlineMax });
                         break;
                     case RevampSettings.Kind.Toggle:
                         var t = Object.Instantiate(toggleTpl, content);
@@ -201,7 +241,7 @@ namespace TLDRevamp
                         ui.Refreshers.Add(() => tg.SetIsOnWithoutNotify(te.Get() == 1));
                         AddHover(ui, t, "<b>" + e.Label + "</b>\n\n" + e.Help);
                         y -= 100f;
-                        ui.Rows.Add(new Row { Go = t, Entry = e, X = 0f, Before = 0f, After = 100f });
+                        ui.Rows.Add(new Row { Go = t, Entry = e, X = 0f, Before = 0f, After = 100f, Section = section, Inline = !sizes.ContainsKey(section) || sizes[section] <= InlineMax });
                         break;
                     case RevampSettings.Kind.Choice:
                         var c = Object.Instantiate(choiceTpl, content);
@@ -217,7 +257,7 @@ namespace TLDRevamp
                         ui.Refreshers.Add(() => { dd.SetValueWithoutNotify(ce.Get()); dd.RefreshShownValue(); });
                         AddHover(ui, c, "<b>" + e.Label + "</b>\n\n" + e.Help);
                         y -= 100f;
-                        ui.Rows.Add(new Row { Go = c, Entry = e, X = 500f, Before = 0f, After = 100f });
+                        ui.Rows.Add(new Row { Go = c, Entry = e, X = 500f, Before = 0f, After = 100f, Section = section, Inline = !sizes.ContainsKey(section) || sizes[section] <= InlineMax });
                         break;
                     case RevampSettings.Kind.Button:
                         // a label on the left, a button on the right that says its value (KeyBindings: the key)
@@ -241,7 +281,7 @@ namespace TLDRevamp
                         AddHover(ui, btn, "<b>" + e.Label + "</b>\n\n" + e.Help);
                         Place(row, 0f, y, 900f, 80f);
                         y -= 100f;
-                        ui.Rows.Add(new Row { Go = row, Entry = e, X = 0f, Before = 0f, After = 100f, Header = true });
+                        ui.Rows.Add(new Row { Go = row, Entry = e, X = 0f, Before = 0f, After = 100f, Header = true, Section = section, Inline = !sizes.ContainsKey(section) || sizes[section] <= InlineMax });
                         break;
                 }
             }
@@ -267,14 +307,40 @@ namespace TLDRevamp
             Layout(ui);
         }
 
+        private static void ShowPage(Ui ui, string page)
+        {
+            ui.Page = page;
+            SetInfo(ui, page == null ? DefaultInfo : "<b>" + page + "</b>\n\nHover over a setting to see what it does. Back returns to the Revamp tab's main page.");
+            Layout(ui);
+            var sr = ui.Tab != null ? ui.Tab.GetComponentInChildren<ScrollRect>(true) : null;
+            if (sr != null) sr.verticalNormalizedPosition = 1f;   // a page opens at its top
+        }
+
         private static void Layout(Ui ui)
         {
             if (ui.Content == null || ui.Rows.Count == 0) return;
-            float y = ui.RowsTop;
+            bool main = !Submenus || ui.Page == null;
+            foreach (var go in ui.MainOnly) if (go != null && go.activeSelf != main) go.SetActive(main);
+            if (ui.Back != null && ui.Back.activeSelf == main) ui.Back.SetActive(!main);
+            if (ui.Title != null) ui.Title.text = main ? "Revamp" : ui.Page;
+            float y = main ? ui.RowsTop : -150f;
+            // the main page: one button per section, two to a row
+            int n = 0;
+            foreach (var kv in ui.SectionButtons)
+            {
+                if (kv.Value == null) continue;
+                bool show = Submenus && main;
+                if (kv.Value.activeSelf != show) kv.Value.SetActive(show);
+                if (!show) continue;
+                Place(kv.Value, (n % 2) * 460f, y - (n / 2) * 100f, 440f, 80f);
+                n++;
+            }
+            if (n > 0) y -= ((n + 1) / 2) * 100f + 20f;
             foreach (var row in ui.Rows)
             {
                 if (row.Go == null) continue;
-                bool shown = row.Entry.Visible == null || row.Entry.Visible();
+                bool onPage = !Submenus || (main ? row.Inline : row.Section == ui.Page && row.Entry.Kind != RevampSettings.Kind.Header);   // the page's title names it
+                bool shown = onPage && (row.Entry.Visible == null || row.Entry.Visible());
                 if (row.Go.activeSelf != shown) row.Go.SetActive(shown);
                 if (!shown) continue;
                 y -= row.Before;
