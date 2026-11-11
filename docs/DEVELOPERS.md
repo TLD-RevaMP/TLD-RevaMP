@@ -305,7 +305,7 @@ contains configs, logs, third-party mods, or personal strings in the DLLs.
 
 Releases for players are the **player edition** (`-p:RevampEdition=player`, `src/TLDRevamp/PlayerEdition.cs`): the same
 code with the developer things off. Settings → Revamp has no Debugging or Branding section, the developer keys are
-hidden and unbound, every debug overlay and the WIP mark are off, the background health, item and part watches don't
+hidden and ignored (their bindings stay in the cfg; the game's own F1 developer menu stays), every debug overlay and the WIP mark are off, the background health, item and part watches don't
 run, and the config's debug bridge is ignored (only an explicit `-tldbridge` on the command line starts it, for the
 test tools). `tools/package.sh` and `tools/previewrelease.py` build it; `tools/build.sh` and `tools/devrelease.py`
 build the full dev edition.

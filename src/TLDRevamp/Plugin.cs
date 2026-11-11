@@ -20,7 +20,7 @@ namespace TLDRevamp
         }
         internal static bool KeyDown(BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> k)
         {
-            if (k == null || Net.Chat.Typing || MarkPanel.Opened || KeyBindings.Swallowed || k.Value.MainKey == KeyCode.None || !Input.GetKeyDown(k.Value.MainKey)) return false;
+            if (k == null || PlayerEdition.Blocked.Contains(k) || Net.Chat.Typing || MarkPanel.Opened || KeyBindings.Swallowed || k.Value.MainKey == KeyCode.None || !Input.GetKeyDown(k.Value.MainKey)) return false;
             // Only on the frame the key went down: either Ctrl/Shift/Alt counts, and Ctrl+Insert does not also fire plain Insert.
             return BugReportLogic.ChordDown((int)k.Value.MainKey, Modifiers(k.Value), c => Input.GetKeyDown((KeyCode)c), c => Input.GetKey((KeyCode)c), OthersOnKey(k));
         }
@@ -28,7 +28,7 @@ namespace TLDRevamp
         private static System.Collections.Generic.IEnumerable<int[]> OthersOnKey(BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> k)
         {
             foreach (var other in new[] { KeyMpScreen, KeyOverlay, KeyReport, KeyItemTraffic, KeyMark, KeyDebugLayout, KeyItemHealth, KeyDevMenu, KeyOwnership, KeyOwnerGhost, KeyLinks, KeyCompare, KeyEvents, KeyRepro, KeyDebugView, KeyCinematic, KeyReplayRecord, KeyReplayPlay })
-                if (other != null && other != k && other.Value.MainKey == k.Value.MainKey) yield return Modifiers(other.Value);
+                if (other != null && other != k && !PlayerEdition.Blocked.Contains(other) && other.Value.MainKey == k.Value.MainKey) yield return Modifiers(other.Value);
         }
         public const string BaseVersion = "0.69.1";
         public static readonly string Version = Metadata("RevampVersion", BaseVersion);
