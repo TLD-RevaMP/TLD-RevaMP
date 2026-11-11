@@ -347,8 +347,14 @@ namespace TLDRevamp.Net
 
         // ---- Steam rich presence: friends' menus see who hosts, its version and whether it has a password
         public const string PresenceKey = "tldrevamp";
-        private static string _presence = "";
-        private static float _presenceAt;
+        /// What was last written (null: nothing yet this run). Friends kept seeing "Hosting a game" (Volkan, 2026-11-11):
+        /// the cache started as "" — the same as "not hosting" — so a new run never wrote "not hosting", and a key left
+        /// set (a run that crashed or was killed while hosting, another copy on the same account) stayed until this
+        /// player hosted and stopped again; a write Steam refused was never tried again either. Now the first check
+        /// writes, a refused write is retried, the value is written again every PresenceEveryS, and quitting clears it.
+        private static string _presence;
+        private static float _presenceAt, _presenceWrittenAt;
+        public static float PresenceEveryS = 30f;
 
         private static void Presence()
         {
@@ -357,10 +363,19 @@ namespace TLDRevamp.Net
             string v = "";
             if (Mp.Server != null && !DedicatedServer.Enabled)
                 v = Protocol.Version + "|" + (Mp.Server.Password.Length > 0 ? 1 : 0) + "|" + (Mp.Server.ReadyCount() + 1) + "|" + MpServer.MaxPlayers + "|" + Plugin.Version + "|" + GameMode.Code();
-            if (v == _presence) return;
-            _presence = v;
-            try { SteamFriends.SetRichPresence(PresenceKey, v.Length > 0 ? v : null); }
+            if (v == _presence && Time.realtimeSinceStartup - _presenceWrittenAt < PresenceEveryS) return;
+            bool ok = false;
+            try { ok = SteamFriends.SetRichPresence(PresenceKey, v.Length > 0 ? v : null); }
             catch (Exception e) { Plugin.Log.LogWarning("rich presence: " + e.Message); }
+            if (!ok) return;   // tried again in 2 s
+            _presence = v; _presenceWrittenAt = Time.realtimeSinceStartup;
+        }
+
+        /// Quitting: friends must not see a game that is gone (Application.quitting).
+        internal static void ClearPresence()
+        {
+            try { if (SteamTransport.SteamReady) SteamFriends.ClearRichPresence(); } catch { }
+            _presence = null;
         }
 
         /// A friend's hosted game, from their rich presence: null when they don't host.

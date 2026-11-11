@@ -487,6 +487,8 @@ namespace TLDRevamp.Net
             Show(_up, _page > 0); Show(_down, _page < pages - 1);
 
             var sel2 = Selected();
+            // the friend picked stopped playing: the screen fell back to "Host", with their password still typed in
+            if (_selAny && sel2 == null && !inGame && !connecting) { _selAny = false; _input.text = ""; }
             string msg = _message;
             Show(_kick, false); Show(_mute, false); Show(_secondary, false);
             bool showInput = false; string placeholder = "";
@@ -557,7 +559,8 @@ namespace TLDRevamp.Net
             }
             else
             {
-                Card(Session.MyName(), "", world ? "Host this game for your friends." : "Start or load a game first,",
+                // the right-hand label says what friends see: the card read as "you host" (Volkan, 2026-11-11)
+                Card(Session.MyName(), "Not hosting", world ? "Host this game for your friends." : "Start or load a game first,",
                      world ? "Steam friends then see it here" : "then host it from this menu.",
                      world ? "and join from their Multiplayer menu." : "", "Friends who play now are listed", "on the left: pick one to join.");
                 showInput = world; placeholder = "Password (optional)";

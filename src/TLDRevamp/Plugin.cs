@@ -310,6 +310,7 @@ namespace TLDRevamp
                 Fixes.AsyncTerrain.Enabled = false; // no new worker jobs during shutdown
                 Bridge?.Stop();
                 SessionLog.Shutdown();
+                Net.Session.ClearPresence();
             };
 
             Log.LogInfo($"TLD Revamp {Version} loaded. Unity {Application.unityVersion}, game build {GameBuild}. " + (BridgeEnabled ? "Bridge on 127.0.0.1:" + BridgePort : "bridge off"));
