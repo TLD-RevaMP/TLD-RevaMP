@@ -111,6 +111,7 @@ with game.ProtectedSession():
             g2 = h(f"mount gap {car} {t}")
             if g2["dist"] < 1.2: return t
             ball = g2["ball"]
+            h(f"deleteshare {t}"); time.sleep(1)   # out of the way: the next one goes where it stands
             return spawn_trailer(h, ball[0] - F[0] * d, ball[2] - F[1] * d, yaw)
         tr = place(); print("  gap:", h(f"mount gap {car} {tr}"), flush=True)
         verdict("S ALONE (A SESSION OF ONE): THE HOST HITCHES BY HAND", try_hitch("host", h, {"host": h}, tr, car, "S"))
