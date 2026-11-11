@@ -27,7 +27,7 @@ namespace TLDRevamp
         private static int[] Modifiers(BepInEx.Configuration.KeyboardShortcut s) => System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Select(s.Modifiers, m => (int)m));
         private static System.Collections.Generic.IEnumerable<int[]> OthersOnKey(BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> k)
         {
-            foreach (var other in new[] { KeyMpScreen, KeyOverlay, KeyReport, KeyItemTraffic, KeyMark, KeyDebugLayout, KeyItemHealth, KeyDevMenu, KeyOwnership, KeyOwnerGhost, KeyLinks, KeyCompare, KeyEvents, KeyRepro, KeyDebugView, KeyCinematic, KeyReplayRecord, KeyReplayPlay })
+            foreach (var other in KeyBindings.Entries())   // every key in Settings > Revamp > Keys
                 if (other != null && other != k && !PlayerEdition.Blocked.Contains(other) && other.Value.MainKey == k.Value.MainKey) yield return Modifiers(other.Value);
         }
         public const string BaseVersion = "0.69.1";
@@ -204,11 +204,15 @@ namespace TLDRevamp
             KeyDevMenu = Config.Bind("Keys", "DevMenu", new BepInEx.Configuration.KeyboardShortcut(KeyCode.F1),
                 "The game's own developer menu (spawning, god mode, …), with Dev Mode on in the game's settings. F1 in the game; RevaMP lets it be changed.");
             // Settings → Revamp → Keys: each of these rebound in game (KeyBindings)
-            KeyBindings.Register(("Developer menu (game, needs Dev Mode)", KeyDevMenu), ("Multiplayer screen", KeyMpScreen), ("Performance overlay", KeyOverlay),
+            // the game's other Dev Mode keys (DevModeKeys) right under its F1 menu, unbound by default
+            var keyRows = new System.Collections.Generic.List<(string, BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut>)> { ("Developer menu (game, needs Dev Mode)", KeyDevMenu) };
+            keyRows.AddRange(DevModeKeys.Bind(Config));
+            keyRows.AddRange(new[] { ("Multiplayer screen", KeyMpScreen), ("Performance overlay", KeyOverlay),
                 ("Debug report", KeyReport), ("Bug report", KeyRepro), ("Session marks", KeyMark), ("Item health", KeyItemHealth), ("Debug layout (V2)", KeyDebugLayout),
                 ("Item traffic", KeyItemTraffic), ("Debug view (Legacy)", KeyDebugView), ("Ownership labels (Legacy)", KeyOwnership), ("Owner ghost (Legacy)", KeyOwnerGhost),
                 ("Links (Legacy)", KeyLinks), ("Object comparison", KeyCompare), ("Object events", KeyEvents), ("Cinematic camera", KeyCinematic),
-                ("Record a replay", KeyReplayRecord), ("Watch the latest replay", KeyReplayPlay));
+                ("Record a replay", KeyReplayRecord), ("Watch the latest replay", KeyReplayPlay) });
+            KeyBindings.Register(keyRows.ToArray());
 
             // Worker fixes (terrain, roads) queue short jobs on the .NET thread pool and sometimes wait for them. Mono's pool
             // starts small and only adds threads slowly when busy, so batches could run on just a few threads.

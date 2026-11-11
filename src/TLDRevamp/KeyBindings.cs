@@ -9,7 +9,8 @@ using UnityEngine.UI;
 
 namespace TLDRevamp
 {
-    /// Settings → Revamp → Keys: every RevaMP key, and the game's own F1 developer menu, rebound in game. Click a key, then
+    /// Settings → Revamp → Keys: every RevaMP key, the game's own F1 developer menu and its other Dev Mode keys
+    /// (DevModeKeys, unbound by default), rebound in game. Click a key, then
     /// press the new one: a chord with Ctrl, Shift or Alt held counts (Ctrl+Insert); a modifier pressed and let go alone is
     /// the key itself (Right Shift); Backspace unbinds, Escape cancels. A key used twice says which other action has it.
     /// The values are the BepInEx config's (tldrevamp.core.cfg, [Keys]), saved as soon as they change.
@@ -24,6 +25,8 @@ namespace TLDRevamp
             foreach (var b in All) d[b.Name] = b.Entry;
             return d;
         }
+        /// Every key's entry, in the Keys section's order (Plugin.KeyDown's chord check).
+        internal static IEnumerable<ConfigEntry<KeyboardShortcut>> Entries() { foreach (var b in All) yield return b.Entry; }
         private static Bind _capturing;
         private static KeyCode _modifierAlone = KeyCode.None;
         private static int _swallowFrame = -1;
@@ -129,7 +132,7 @@ namespace TLDRevamp
                 bind.Entry.Value = new KeyboardShortcut(k);
                 RevampMenu.RefreshOpen();
             }
-            var sb = new System.Text.StringBuilder("{\"capturing\":").Append(_capturing != null ? Json.Str(_capturing.Name) : "null").Append(",\"devMenuPatched\":").Append(DevMenuKey.Patched ? "true" : "false").Append(",\"keys\":[");
+            var sb = new System.Text.StringBuilder("{\"capturing\":").Append(_capturing != null ? Json.Str(_capturing.Name) : "null").Append(",\"devMenuPatched\":").Append(DevMenuKey.Patched ? "true" : "false").Append(",\"devModeKeys\":").Append(DevModeKeys.Status()).Append(",\"keys\":[");
             for (int i = 0; i < All.Count; i++) { if (i > 0) sb.Append(','); sb.Append("{\"name\":").Append(Json.Str(All[i].Name)).Append(",\"key\":").Append(Json.Str(Show(All[i]))).Append('}'); }
             return sb.Append("]}").ToString();
         }
