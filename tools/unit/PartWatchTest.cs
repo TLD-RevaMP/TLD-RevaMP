@@ -28,6 +28,7 @@ static class PartWatchTest
         // a tyre on a rim on a car: the game switched its colliders off (disableCollidersOnCraft up its chain)
         Check("a part the game switched off on craft is not (a tyre on a rim on a car)", !PartWatchRules.Broken(true, false, false, 0));
         Check("but on the held layer it is, whatever the slot", PartWatchRules.Broken(true, false, false, 2));
+        Check("on the held layer with every collider off: the slot decides, not the layer (a tyre on a carried wheel)", !PartWatchRules.Broken(true, false, false, 2, 0));
         Check("a hidden part is not", !PartWatchRules.Broken(false, false, true, 0));
         Check("a reachable part is not", !PartWatchRules.Broken(true, true, true, 0));
         Check("colliders on the held layer: held layer", PartWatchRules.Why(2, 2) == PartWatchRules.HeldLayer);

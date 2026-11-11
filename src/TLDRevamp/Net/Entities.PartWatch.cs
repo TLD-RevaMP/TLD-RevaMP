@@ -113,9 +113,9 @@ namespace TLDRevamp.Net
             {
                 if (!_watched.TryGetValue(part, out var w)) _watched[part] = w = new WatchedPart();
                 w.Renderers.Clear(); part.GetComponentsInChildren(true, w.Renderers);
-                if (pl.pickedUp == part.tosave.P) continue;
+                if (pl.pickedUp == part.tosave.P || HeldAbove(part.transform, pl)) { w.LostAt = -1f; continue; }   // carried, or on something carried
                 var r = Reach(part, pl);
-                if (!PartWatchRules.Broken(r.Visible, r.Targetable, r.Expected, r.Held)) { w.LostAt = -1f; continue; }
+                if (!PartWatchRules.Broken(r.Visible, r.Targetable, r.Expected, r.Held, r.Live)) { w.LostAt = -1f; continue; }
                 if (w.LostAt < 0f) w.LostAt = now;
                 else if (now - w.LostAt >= PartWatchRules.NearbyAfterS) PartWatchFound(part, w, r, PartWatchRules.Why(r.Live, r.Held), "nearby", null, now);
             }
@@ -133,11 +133,11 @@ namespace TLDRevamp.Net
                     if (rd != null && rd.enabled && rd.gameObject.activeInHierarchy && rd.bounds.IntersectRay(ray, out float d) && d <= reach && d < bestD) { bestD = d; best = part; }
             }
             foreach (var kv in _watched) if (kv.Key != best) kv.Value.LookAt = -1f;
-            if (best == null || pl.pickedUp == best.tosave.P) return;
+            if (best == null || pl.pickedUp == best.tosave.P || HeldAbove(best.transform, pl)) return;
             var bw = _watched[best];
             var r = Reach(best, pl);
             string why = null, blocker = null;
-            if (!r.Targetable) { if (PartWatchRules.Broken(r.Visible, false, r.Expected, r.Held)) why = PartWatchRules.Why(r.Live, r.Held); }
+            if (!r.Targetable) { if (PartWatchRules.Broken(r.Visible, false, r.Expected, r.Held, r.Live)) why = PartWatchRules.Why(r.Live, r.Held); }
             else if (Physics.Raycast(ray, out var hit, reach, pl.useLayer) && hit.distance < bestD - 0.05f && !OfPart(hit.collider, best) && !Shows(hit.collider.transform.root))
             { why = PartWatchRules.Blocked; blocker = hit.collider.transform.root.name; }
             if (why == null) { bw.LookAt = -1f; return; }
@@ -164,11 +164,11 @@ namespace TLDRevamp.Net
             var so = part.slot != null ? part.slot.tosaveitem : null;
             int slot = so != null && so.partslotscripts != null ? so.partslotscripts.IndexOf(part.slot) : -1;
             string kind = PrefabName(ts.id), on = so != null ? PrefabName(so.id) : "?";
-            PartWatchLast = kind + " on " + on + " #" + slot + ": " + why + " (" + how + ", colliders " + r.Live + "/" + r.Cols + " on, " + r.UseLayer + " on the use layer, "
+            PartWatchLast = kind + " net " + (partNet != 0 ? partNet : groupNet) + " on " + on + " #" + slot + ": " + why + " — (" + how + ", colliders " + r.Live + "/" + r.Cols + " on, " + r.UseLayer + " on the use layer, "
                             + r.Held + " on the held layer" + (blocker != null ? ", in front: " + blocker : "") + ", " + (own != null ? (own.Proxy ? "a copy" : "ours") : group != null ? (group.Proxy ? "a copy's part" : "our part") : "not shared") + ")";
             SessionLog.Event("part-untargetable", partNet != 0 ? partNet : groupNet, other: groupNet, slot: slot, count: r.Cols, value: r.Live, dx: r.UseLayer, dy: r.Held, result: why);
             Plugin.Log.LogWarning("part watch: " + PartWatchLast);
-            if (PartWatchMarks && AutoMark("auto: " + PartWatchLast)) PartWatchMarksSaved++;
+            if (PartWatchMarks && AutoMark("auto: " + PartWatchLast, partNet != 0 ? partNet : groupNet)) PartWatchMarksSaved++;
         }
 
         /// Debugging V2's tab line for an object: its colliders switched on (of all), its body (kinematic, a physical copy,

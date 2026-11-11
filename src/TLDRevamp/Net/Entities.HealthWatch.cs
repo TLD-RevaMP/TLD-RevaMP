@@ -34,12 +34,14 @@ namespace TLDRevamp.Net
         private static readonly HashSet<int> _hwPlayers = new HashSet<int>();
         private static readonly Dictionary<uint, string> _hwActive = new Dictionary<uint, string>();
         private static readonly Dictionary<uint, int> _repairFails = new Dictionary<uint, int>();
+        private static readonly HashSet<uint> _hwAbove = new HashSet<uint>();   // seen above the ground this session
         private static int _groundMask = -1;
         private static (attachablescript part, partslotscript slot) _brokenSlot;   // `break slot`, for fix
 
         private static void HealthWatchTick()
         {
             if (!HealthWatch || ByNet.Count == 0) return;
+            AutoMarkWaitingTick();
             float now = Time.realtimeSinceStartup;
             if (now - _hwAt < HealthWatchEveryS) return;
             _hwAt = now;
@@ -52,7 +54,7 @@ namespace TLDRevamp.Net
                 HealthWatchOne(e, now, true); n++;
             }
             // the loaded objects farther away: only what can never be right (a flung object leaves the range at once)
-            if (_hwFarCursor >= _hwFar.Count) { _hwFar.Clear(); _hwFarCursor = 0; foreach (var kv in ByNet) if (!_hwCycle.Contains(kv.Key)) _hwFar.Add(kv.Key); }
+            if (_hwFarCursor >= _hwFar.Count) { _hwFar.Clear(); _hwFarCursor = 0; foreach (var e in Placed()) if (!_hwCycle.Contains(e.NetId)) _hwFar.Add(e.NetId); }
             for (int n = 0; n < HealthWatchFarPerTick && _hwFarCursor < _hwFar.Count;)
             {
                 uint net = _hwFar[_hwFarCursor++];
@@ -109,7 +111,7 @@ namespace TLDRevamp.Net
             if (key == HealthWatchRules.OwnerLeft) _hwActive[e.NetId] = "health: owner left";
             SessionLog.Event("health-problem", e.NetId, from: e.OwnerId, epoch: e.Epoch, result: key);
             Plugin.Log.LogWarning("health watch: " + HealthWatchLast);
-            AutoMark("auto: " + HealthWatchLast);
+            AutoMark("auto: " + HealthWatchLast, e.NetId);
         }
 
         /// One automatic mark (every watch shares it): the state of this machine and, through the host, the others'.
@@ -121,20 +123,35 @@ namespace TLDRevamp.Net
         public static long AutoMarksSkipped;
         private static readonly HashSet<string> _autoMarked = new HashSet<string>(StringComparer.Ordinal);
         private static int _autoMarksThisSession;
-        internal static void ResetAutoMarks() { _autoMarked.Clear(); _autoMarksThisSession = 0; }
-        internal static bool AutoMark(string note)
+        internal static void ResetAutoMarks() { _autoMarked.Clear(); _autoMarksThisSession = 0; _autoWaiting.Clear(); _hwAbove.Clear(); }
+        /// Finds that came within AutoMarkEveryS of the last mark: marked when the gap is over (they were dropped, and a
+        /// false alarm just before could crowd out a real problem).
+        private static readonly List<KeyValuePair<string, uint>> _autoWaiting = new List<KeyValuePair<string, uint>>();
+        /// `note`: "auto: <subject> — <details>": the subject (what and which problem, "Magazin net 9: Under the ground")
+        /// is marked once a session; `net`: the object it is about, recorded with the mark.
+        internal static bool AutoMark(string note, uint net = 0)
         {
+            if (!AutoMarks) return false;
             float now = Time.realtimeSinceStartup;
-            if (!AutoMarks || now - _autoMarkAt < AutoMarkEveryS) return false;
-            // the subject: what and which problem ("auto: Magazin net 9: Under the ground"), not the details after it
-            int cut = note.IndexOf(" — ", StringComparison.Ordinal);
-            string subject = cut > 0 ? note.Substring(0, cut) : note;
-            if (_autoMarksThisSession >= AutoMarkMax || !_autoMarked.Add(subject)) { AutoMarksSkipped++; return false; }
+            string subject = TelemetryMarks.AutoSubject(note) ?? note;
+            if (_autoMarksThisSession >= AutoMarkMax || _autoMarked.Contains(subject)) { AutoMarksSkipped++; return false; }
+            if (now - _autoMarkAt < AutoMarkEveryS)
+            {
+                if (_autoWaiting.Count < 4 && !_autoWaiting.Exists(w => TelemetryMarks.AutoSubject(w.Key) == subject)) _autoWaiting.Add(new KeyValuePair<string, uint>(note, net));
+                return false;
+            }
+            _autoMarked.Add(subject);
             _autoMarksThisSession++;
             _autoMarkAt = now;
-            string res = TelemetryMarks.Local(note);
+            string res = TelemetryMarks.Local(note, net);
             if (!res.Contains("\"ok\"")) return false;
             AutoMarksSaved++; return true;
+        }
+        private static void AutoMarkWaitingTick()
+        {
+            if (_autoWaiting.Count == 0 || Time.realtimeSinceStartup - _autoMarkAt < AutoMarkEveryS) return;
+            var w = _autoWaiting[0]; _autoWaiting.RemoveAt(0);
+            AutoMark(w.Key, w.Value);
         }
 
         /// Debugging V2's tab: the problems the watch reported on this object and that are still there, or null.
@@ -145,7 +162,7 @@ namespace TLDRevamp.Net
         {
             _repairFails.TryGetValue(net, out int n); _repairFails[net] = ++n;
             string name = e != null && e.Root != null ? PrefabName(e.Root.id) : "net " + net;
-            if (n == 1) AutoMark("auto: repair did not take: " + name + " net " + net + " — " + (diff.Length > 200 ? diff.Substring(0, 200) : diff));
+            if (n == 1) { SessionLog.Event("repair-failed", net, result: diff.Length > 120 ? diff.Substring(0, 120) : diff); Plugin.Log.LogWarning("repair did not take: " + name + " net " + net + " — " + diff); }
             if (n == 3 && e != null) HealthWatchFound(e, HealthWatchRules.RepairLoop, "Repair keeps failing", "The census found this copy different from its owner's three times and the owner's resend did not fix it: " + diff);
         }
 
@@ -164,7 +181,16 @@ namespace TLDRevamp.Net
             }
             double ground = GroundOver(p);
             if (!double.IsNaN(ground) && p.y < ground - HealthWatchRules.UnderGroundM && HealthWatchRules.IsUnderGround(p.y, ground, FloorBelow(e, p)))
-                Add(2, "Under the ground", N(ground - p.y) + " m under the ground's surface with nothing below it: it fell through the world.", null, HealthWatchRules.UnderGround);
+            {
+                // only a fall seen here: above the ground before this session, or falling now. Objects a save already holds
+                // deep down (an earlier fall-through, saved) were marked again in every session, at the same depths
+                // (DevTest 11-10: Attachable07 207 m, Drotkefe 200 m, BeerGib01 229 m: 56 of 161 automatic marks)
+                bool falling = rb != null && !rb.isKinematic && rb.velocity.y < -1f;
+                if (_hwAbove.Contains(e.NetId) || falling)
+                    Add(2, "Under the ground", N(ground - p.y) + " m under the ground's surface with nothing below it: it fell through the world.", null, HealthWatchRules.UnderGround);
+                else Add(1, "Under the ground (from before)", N(ground - p.y) + " m under the ground's surface with nothing below it, already when first seen this session (a save's leftover).");
+            }
+            else if (!double.IsNaN(ground)) _hwAbove.Add(e.NetId);
             if (e.OwnerId > 0 && e.OwnerId != MyId && OwnerGone(e.OwnerId))
                 Add(2, "Owner left", "Owned by player " + e.OwnerId + ", who is no longer in the session.", null, HealthWatchRules.OwnerLeft);
             // slots: the same part twice, or a part that names another slot
@@ -181,7 +207,7 @@ namespace TLDRevamp.Net
                             var part = ps.parts[i]; if (part == null) continue;
                             if (part.slot != ps) bad.Add(PrefabName(part.tosave != null ? part.tosave.id : -1) + " is in slot " + ps.name + " but names " + (part.slot != null ? part.slot.name : "no slot"));
                             for (int j = i + 1; j < ps.parts.Count; j++)
-                                if (ps.parts[j] == part || ps.parts[j] != null && part.tosave != null && ps.parts[j].tosave != null && ps.parts[j].tosave.id == part.tosave.id)
+                                if (ps.parts[j] == part || !ps.attachTarget && ps.parts[j] != null && part.tosave != null && ps.parts[j].tosave != null && ps.parts[j].tosave.id == part.tosave.id)
                                     bad.Add(PrefabName(part.tosave != null ? part.tosave.id : -1) + " twice in slot " + ps.name);
                         }
                     }

@@ -17,8 +17,10 @@ namespace TLDRevamp.Net
 
         /// `collidersExpected`: no slot up the part's chain switches colliders off on craft. `held`: colliders on the
         /// held-item layer while fitted and not in a hand.
-        internal static bool Broken(bool visible, bool targetable, bool collidersExpected, int held) =>
-            visible && !targetable && (collidersExpected || held > 0);
+        /// `held` colliders on the held layer count only when some collider is on (all off and on the held layer: the layer
+        /// doesn't matter, and the slot decides whether they should be on).
+        internal static bool Broken(bool visible, bool targetable, bool collidersExpected, int held, int live = 1) =>
+            visible && !targetable && (collidersExpected || (held > 0 && live > 0));
 
         /// Why a part has no collider the use ray hits: `live` colliders switched on, `held` on the held-item layer.
         internal static string Why(int live, int held) => held > 0 ? HeldLayer : live == 0 ? Off : NotUseLayer;

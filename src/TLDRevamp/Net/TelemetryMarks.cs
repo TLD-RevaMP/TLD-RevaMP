@@ -8,11 +8,25 @@ namespace TLDRevamp.Net
         // Requests: note, nets. Broadcasts: note, host time, anonymous origin, self bit, nets.
         internal const byte Message = 92;
         private static readonly MarkLimiter Limit = new MarkLimiter();
-        internal static void Reset() => Limit.Clear();
-        internal static string Note(string note) => TelemetryPrivacy.Note(note);
-        internal static string Local(string note)
+        internal static void Reset() { Limit.Clear(); _autoSubjects.Clear(); _autoCount = 0; }
+        /// Automatic marks ("auto: <subject> — <details>") on the host, from every player: each mark already records every
+        /// machine, so one per subject, and AutoSessionMax in the session in all. Each machine counted its own (10 each),
+        /// and the same broken object was marked once by every machine (DevTest, 2026-11-10: three marks in 3 s for one
+        /// Attachable07).
+        public static int AutoSessionMax = 5;
+        public static long AutoRefused;
+        private static readonly System.Collections.Generic.HashSet<string> _autoSubjects = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+        private static int _autoCount;
+        internal static string AutoSubject(string note)
         {
-            note = Note(note); var nets = Entities.MarkNets();
+            if (note == null || !note.StartsWith("auto:", StringComparison.Ordinal)) return null;
+            int cut = note.IndexOf(" — ", StringComparison.Ordinal);
+            return cut > 0 ? note.Substring(0, cut) : note;
+        }
+        internal static string Note(string note) => TelemetryPrivacy.Note(note);
+        internal static string Local(string note, uint subject = 0)
+        {
+            note = Note(note); var nets = Entities.MarkNets(subject);
             if (Mp.Server != null) return Server(0, 0, note, nets) ? "{\"ok\":true}" : "{\"error\":\"one mark per 10 seconds\"}";
             if (!Limit.Try(0, Time.realtimeSinceStartupAsDouble)) return "{\"error\":\"one mark per 10 seconds\"}";
             if (Mp.Client != null)
@@ -26,7 +40,10 @@ namespace TLDRevamp.Net
         internal static bool Server(int from, ulong account, string note, uint[] nets)
         {
             ulong key = from == 0 ? 0 : account != 0 ? account : 0xFFFFFFFF00000000UL | (uint)from;
+            string auto = AutoSubject(note);
+            if (auto != null && (_autoCount >= AutoSessionMax || _autoSubjects.Contains(auto))) { AutoRefused++; return false; }
             if (!Limit.Try(key, Time.realtimeSinceStartupAsDouble)) return false;
+            if (auto != null) { _autoSubjects.Add(auto); _autoCount++; }
             note = Note(note); double st = SessionLog.St;
             Reports.KnowMark(SessionLog.Sid, st, from);
             SessionLog.Mark(note, from == 0 ? "me" : "player", st, from, nets);
@@ -77,12 +94,15 @@ namespace TLDRevamp.Net
             return new MarkFocus.Target { Net = entity != null ? entity.NetId : 0, Prefab = item != null ? item.id : -1,
                 Name = TelemetryPrivacy.ObjectName(item != null ? item.name : name), Distance = distance };
         }
-        internal static uint[] MarkNets()
+        /// `subject`: the object an automatic mark is about, first (it was only the crosshair's, the held item's and the car's:
+        /// an object under the ground far off wasn't even in the capture).
+        internal static uint[] MarkNets(uint subject = 0)
         {
             TelemetryFocusTick(Time.realtimeSinceStartupAsDouble, true);
             var f = CaptureMarkFocus(null);
             var nets = new System.Collections.Generic.List<uint>(MarkWire.Limit);
             Action<uint> add = net => { if (net != 0 && nets.Count < MarkWire.Limit && !nets.Contains(net)) nets.Add(net); };
+            add(subject);
             add(f.Crosshair?.Net ?? 0); add(f.Held?.Net ?? 0); add(f.Dragging?.Net ?? 0); add(f.Car?.Net ?? 0);
             for (int i = 0; i < MotionTrace.FocusLimit; i++) add(SessionLog.History.Trace.Focus(i));
             return nets.ToArray();

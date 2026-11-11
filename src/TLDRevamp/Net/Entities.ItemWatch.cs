@@ -91,7 +91,8 @@ namespace TLDRevamp.Net
             var bw = _itemWatched[best.NetId];
             var r = ItemReach(best, pl, bw);
             string why = null, blocker = null;
-            if (!r.Targetable) { if (r.Visible) why = HealthWatchRules.ItemWhy(r.Live, r.Held); }
+            // a ragdoll's root has no colliders of its own (its bones are unparented, each a pickupable): 0/0 is no problem
+            if (!r.Targetable) { if (r.Visible && r.Cols > 0 && !Ragdoll(best.Root)) why = HealthWatchRules.ItemWhy(r.Live, r.Held); }
             else if (Physics.Raycast(ray, out var hit, reach, pl.pickupLayer) && hit.distance < bestD - 0.05f && !hit.collider.transform.IsChildOf(best.Root.transform) && !Shows(hit.collider.transform.root))
             { why = PartWatchRules.Blocked; blocker = hit.collider.transform.root.name; }
             if (why == null) { bw.LookAt = -1f; return; }
@@ -103,11 +104,11 @@ namespace TLDRevamp.Net
         {
             if (w.Done) return;
             w.Done = true; ItemWatchFlags++;
-            ItemWatchLast = PrefabName(e.Root.id) + " net " + e.NetId + ": " + why + " (" + how + ", colliders " + r.Live + "/" + r.Cols + " on, " + r.Pickup + " on the pickup layer, "
+            ItemWatchLast = PrefabName(e.Root.id) + " net " + e.NetId + ": " + why + " — (" + how + ", colliders " + r.Live + "/" + r.Cols + " on, " + r.Pickup + " on the pickup layer, "
                             + r.Held + " on the held layer" + (blocker != null ? ", in front: " + blocker : "") + ", " + (e.Proxy ? "a copy" : "ours") + ")";
             SessionLog.Event("item-untargetable", e.NetId, from: e.OwnerId, epoch: e.Epoch, count: r.Cols, value: r.Live, dx: r.Pickup, dy: r.Held, result: why);
             Plugin.Log.LogWarning("item watch: " + ItemWatchLast);
-            AutoMark("auto: " + ItemWatchLast);
+            AutoMark("auto: " + ItemWatchLast, e.NetId);
         }
     }
 }
