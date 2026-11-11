@@ -256,11 +256,25 @@ namespace TLDRevamp
             { particles++; if (ps.isPlaying) playing++; }
             int cars = mainscript.s?.Cars != null ? mainscript.s.Cars.Count : -1;
             int copies = Net.Mp.Server != null || Net.Mp.Client != null ? Net.Entities.CopyCarCount() : 0;
+            // what can pile up over a long session (a host's FPS fell from ~100 to ~70 over a few hundred km, 2026-11-11):
+            // meshes alive (leaked ones too), objects, the buildings the game ever placed (poiGenScript.Upd walks them every
+            // frame), the managed heap, the shared objects
+            int meshes = Resources.FindObjectsOfTypeAll<Mesh>().Length, transforms = UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Length;
+            int pois = 0, poiChunks = 0;
+            try
+            {
+                var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;
+                if (map != null && map.poiGens != null)
+                    foreach (var g in map.poiGens) if (g != null && g.chunks != null) foreach (var c in g.chunks.Values) { poiChunks++; if (c?.pois != null) pois += c.pois.Count; }
+            }
+            catch { }
             double ms = (System.Diagnostics.Stopwatch.GetTimestamp() - t0) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
             _at = now;
             _body = "\"rigidbodies\":" + bodies + ",\"rigidbodiesDynamic\":" + dynamic + ",\"rigidbodiesAwake\":" + awake +
                 ",\"renderers\":" + renderers + ",\"renderersVisible\":" + visible + ",\"lights\":" + lights + ",\"shadowLights\":" + shadowLights +
                 ",\"particleSystems\":" + particles + ",\"particleSystemsPlaying\":" + playing + ",\"cars\":" + cars + ",\"carCopies\":" + copies +
+                ",\"meshes\":" + meshes + ",\"transforms\":" + transforms + ",\"pois\":" + pois + ",\"poiChunks\":" + poiChunks +
+                ",\"heapMB\":" + Json.Num(System.GC.GetTotalMemory(false) / 1048576.0, "F0") + ",\"shared\":" + Net.Entities.SharedCount +
                 ",\"scanMs\":" + Json.Num(ms) + ",\"sampleSt\":" + Json.Num(SessionLog.St);
             return "{" + _body + "}";
         }
