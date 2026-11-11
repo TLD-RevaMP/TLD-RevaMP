@@ -218,7 +218,7 @@ assert old in s, "anchor missing"
 open(p, "w").write(s.replace(old, 'if (wasUp && !worldUp) { _unloadCalled = true; }'))
 d = work + "/docs/MODDING-MULTIPLAYER.md"
 t = open(d).read()
-anchor = "config folder)."
+anchor = "TLDRevamp.Preloader.LoaderAliases)."
 assert anchor in t, "doc anchor missing"
 open(d, "w").write(t.replace(anchor, anchor + "\nThe host calls `OnUnload` when the world goes away.", 1))
 PY
@@ -230,7 +230,7 @@ work = sys.argv[1]
 # but the code waits for the player to exist
 d = work + "/docs/MODDING-MULTIPLAYER.md"
 t = open(d).read()
-anchor = "config folder)."
+anchor = "TLDRevamp.Preloader.LoaderAliases)."
 assert anchor in t, "doc anchor missing"
 open(d, "w").write(t.replace(anchor, anchor + "\n`OnLoad` runs as soon as the game scene is active.", 1))
 p = work + "/src/TLDRevamp/ModHost.cs"
