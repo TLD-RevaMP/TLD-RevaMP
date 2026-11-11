@@ -25,5 +25,6 @@ namespace TLDRevamp.Net
         internal static string OverlayColliders(Ent e, bool aimed = false) => "";
         internal static string HealthWatchLine(uint net) => null;
         private static List<Ent> LookupSet() => new List<Ent>(ByNet.Values);   // Entities.Placed: every object here is placed
+        internal static void SeatCollisionIgnore(TestPlayer pl, TestSeat seat) { }   // Entities.Seat (SetProxy around a seated player)
     }
 }
