@@ -80,7 +80,8 @@ their config folder, LoadAssets (asset bundles, textures, .obj meshes) and their
 lifecycle calls (DbLoad when the item database is ready, OnMenuLoad in the menu,
 OnLoad when the world is up, OnUnload when it goes away, Update, FixedUpdate and
 OnGUI). They can use the public game's names mainscript.M, itemdatabase.d and
-savedatascript.d. There must be no other mod loader installed at the same time.
+savedatascript.d, and read idInSave as the int it is there. There must be no other
+mod loader installed at the same time.
 
 REQUIREMENTS
 - Your own copy of The Long Drive on Steam, on the BETA branch.

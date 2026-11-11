@@ -55,7 +55,7 @@ namespace TLDRevamp
                 foreach (var dll in dlls)
                 {
                     Type[] types;
-                    try { types = Assembly.LoadFrom(dll).GetTypes(); }
+                    try { types = LoadMod(dll).GetTypes(); }
                     catch (ReflectionTypeLoadException e) { Plugin.Log.LogError("ModHost: " + Path.GetFileName(dll) + " types failed: " + e.LoaderExceptions[0]); continue; }
                     catch (Exception e) { Plugin.Log.LogError("ModHost: " + Path.GetFileName(dll) + " failed to load: " + e.Message); continue; }
                     foreach (var t in types)
@@ -99,6 +99,21 @@ namespace TLDRevamp
                 AutopilotBridge.Install();   // test tooling: the autopilot port made aware of other players
             }
             catch (Exception e) { Info = "failed: " + e.Message; Plugin.Log.LogError("ModHost: " + e); }
+        }
+
+        /// A/B (config Mods.RetargetLoaderMods, read before the mods load): false = before 2026-11-11, every mod loaded
+        /// as it is, its int reads of the beta's uint fields (idInSave) missing (LoaderRetarget).
+        public static bool Retarget = true;
+        public static int Retargeted;
+
+        private static Assembly LoadMod(string dll)
+        {
+            if (!Retarget) return Assembly.LoadFrom(dll);
+            var asm = LoaderRetarget.Load(dll, typeof(mainscript).Assembly,
+                new[] { ModsDir, BepInEx.Paths.ManagedPath, BepInEx.Paths.BepInExAssemblyDirectory, Path.GetDirectoryName(typeof(ModHost).Assembly.Location) },
+                m => Plugin.Log.LogInfo("ModHost: " + m));
+            if (string.IsNullOrEmpty(asm.Location)) Retargeted++;
+            return asm;
         }
 
         private static MethodInfo Overridden(Type t, Type modBase, string name)
@@ -259,7 +274,7 @@ namespace TLDRevamp
         {
             var rows = new List<string>();
             foreach (var l in Mods) rows.Add("{\"id\":" + Json.Str(l.Id) + ",\"name\":" + Json.Str(l.Name) + ",\"version\":" + Json.Str(l.Version) + ",\"lastError\":" + Json.Str(l.LastError ?? "") + "}");
-            return "{\"info\":" + Json.Str(Info) + ",\"inGame\":" + (_worldUp ? "true" : "false") + ",\"onLoadCalled\":" + (_gameLoadedCalled ? "true" : "false") +
+            return "{\"info\":" + Json.Str(Info) + ",\"retargeted\":" + Retargeted + ",\"inGame\":" + (_worldUp ? "true" : "false") + ",\"onLoadCalled\":" + (_gameLoadedCalled ? "true" : "false") +
                    ",\"unloadedSinceLastLoad\":" + (_unloadCalled ? "true" : "false") + ",\"hasConfig\":" + (AnyConfig ? "true" : "false") + ",\"mods\":[" + string.Join(",", rows) + "]}";
         }
     }

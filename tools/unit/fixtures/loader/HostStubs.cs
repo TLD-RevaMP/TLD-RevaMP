@@ -42,6 +42,8 @@ namespace BepInEx
         /// The test points these at a temporary BepInEx folder.
         public static string BepInExRootPath = "";
         public static string ConfigPath = "";
+        public static string ManagedPath = "";
+        public static string BepInExAssemblyDirectory = "";
     }
 }
 
