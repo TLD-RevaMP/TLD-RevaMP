@@ -31,14 +31,11 @@ namespace TLDRevamp.Net
                     var it = __instance.GetComponentInParent<tosaveitemscript>();
                     if (it == null) return false;
                     a = null;
-                    foreach (var e in ByNet.Values)
-                    {
-                        if (!e.Proxy || e.Items == null) continue;
-                        int i = e.Items.IndexOf(it);
-                        if (i < 0) continue;
-                        a = new PushAcc { Net = e.NetId, Item = i, Index = System.Array.IndexOf(it.GetComponentsInChildren<pushablescript>(true), __instance) };
-                        break;
-                    }
+                    // the object it belongs to now (a part that came off is its own: EditEntityOf skips split members); the
+                    // first group listing it sent a pushed loose wheel to its old car's owner, where it was a copy
+                    var e = EditEntityOf(it);
+                    int i = e != null && e.Proxy && e.Items != null ? e.Items.IndexOf(it) : -1;
+                    if (i >= 0) a = new PushAcc { Net = e.NetId, Item = i, Index = System.Array.IndexOf(it.GetComponentsInChildren<pushablescript>(true), __instance) };
                     if (a == null || a.Index < 0) return false;
                     PushOut[__instance] = a;
                 }

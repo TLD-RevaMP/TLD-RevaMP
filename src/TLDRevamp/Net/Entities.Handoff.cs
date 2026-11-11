@@ -39,6 +39,10 @@ namespace TLDRevamp.Net
             return ByNet.TryGetValue(se.NetId, out var e) && e.Root != null && e.Root.attachable != null && e.Root.attachable.attached && AttachedToItem(e.Root);
         }
 
+        /// A member that came off its car and is on nothing now (not bolted back, not glued to something).
+        private static bool LooseSplit(SEnt se) =>
+            se.ParentNet != 0 && se.AttachParent == 0 && se.CarrierNet == 0 && Server.TryGetValue(se.ParentNet, out var car) && car.SplitOff != null && car.SplitOff.Contains(se.PartIndex);
+
         private static void ServerHandoffTick(float dt)
         {
             if (Mp.Server == null || !HandoffEnabled) return;
@@ -57,7 +61,9 @@ namespace TLDRevamp.Net
             int n = 0;
             foreach (var se in Server.Values)
             {
-                if (se.HitchCar != 0 || se.PartIndex >= 0 || se.CrashReturnTo >= 0) continue;                       // parts go with their car
+                // parts go with their car; one that came off and lies loose is an object of its own: left with an owner far
+                // off, the player next to it saw a frozen copy nobody simulated (a wheel thrown off, the host driven away)
+                if (se.HitchCar != 0 || se.CrashReturnTo >= 0 || se.PartIndex >= 0 && !LooseSplit(se)) continue;
                 if (HandoffKeepsMounted && Mounted(se)) { HandoffKeptMounted++; continue; }   // goes with what it's on
                 if (se.Driven && Time.realtimeSinceStartup - se.DrivenAt < 1f) continue;        // its driver keeps it
                 if (HandoffKeepCarried && (se.Held || se.Stored)) { HandoffKeptCarried++; continue; }   // in someone's hands or inventory: theirs, wherever it was last seen
