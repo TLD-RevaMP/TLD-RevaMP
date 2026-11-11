@@ -45,7 +45,7 @@ namespace TLDRevamp
         internal static void Apply(IDictionary<string, ConfigEntry<KeyboardShortcut>> keys)
         {
             if (!On) return;
-            Net.Entities.HealthWatch = false; Net.Entities.AutoMarks = false;
+            Net.Entities.HealthWatch = false; Net.Entities.AutoMarks = false; Fixes.LoadWatch.Enabled = false;
             Net.Entities.ItemWatch = false; Net.Entities.PartWatch = false; Net.Entities.PartWatchMarks = false;
             Plugin.SetWipMark(false);
             var entries = RevampSettings.Entries;

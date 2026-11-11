@@ -14,6 +14,7 @@ namespace TLDRevamp.Fixes
     [HarmonyPatch(typeof(fpscontroller), "Update")]
     public static class LoadWatch
     {
+        public static bool Enabled = true;   // a diagnostic: off in the player edition
         public static float WatchS = 30f;
         private class Body { public string Name; public uint Save; public Rigidbody RB; public Vector3 Start; public float Max, MaxAt = -1, FreeAt = -1, Gap0 = -1, GapMax, Ball0 = -1, BallMax; public attachgripscript Grip; public tosaveitemscript Item; }
         private static readonly List<Body> _bodies = new List<Body>();
@@ -27,7 +28,7 @@ namespace TLDRevamp.Fixes
         {
             var map = menuhandler.s != null ? menuhandler.s.currentMainMap : null;
             if (map != _map) { _map = map; _bodies.Clear(); _seen.Clear(); _t0 = -1; _logged = false; _trace.Clear(); _tt = _tg = _tc = null; _traceFrom = -1; }
-            if (map == null || !map.firstRun || mainscript.s == null || __instance != mainscript.s.player || savedatascript.s == null) return;
+            if (!Enabled || map == null || !map.firstRun || mainscript.s == null || __instance != mainscript.s.player || savedatascript.s == null) return;
             float now = Time.realtimeSinceStartup;
             if (_t0 < 0) { _t0 = now; _scanAt = 0; }
             float t = now - _t0;

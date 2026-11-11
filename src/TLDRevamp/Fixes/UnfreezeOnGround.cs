@@ -37,8 +37,11 @@ namespace TLDRevamp.Fixes
         internal static bool Holding(tosaveitemscript t) => t != null && _held.ContainsKey(t.GetInstanceID());
 
         [HarmonyPrefix, HarmonyPriority(Priority.Low)]
-        private static bool Prefix(tosaveitemscript __instance)
+        private static bool Prefix(tosaveitemscript __instance, bool __runOriginal)
         {
+            // an earlier prefix refused (Entities: a network copy): Harmony runs this one anyway. It raycast for every copy
+            // in range each second, and could let a copy's hitch partner go against that refusal
+            if (!__runOriginal) return false;
             if (Net.Tpa.Holding(__instance.RB) || LoadFreeze.Holding) return false;
             if (!Enabled || __instance.RB == null || !__instance.RB.isKinematic || __instance.buried) return true;
             if (_partnerCall) return true;   // let go with its hitch partner: both were checked there
@@ -66,9 +69,11 @@ namespace TLDRevamp.Fixes
                 Held++; if (something) HeldFar++; if (partner) HeldForPartner++;
                 if (Held <= 10) Plugin.Log.LogWarning($"unfreeze held ({(partner ? "what it is hitched to has nothing under it" : something ? $"what is under it is {nearest:F1} m down" : "nothing under it")} yet): {__instance.name} at global {mainscript.GlobalFromUnityPos(p).ToString()}");
             }
-            else if ((something || partner) && now - since > HoldMaxS)
+            else if (now - since > HoldMaxS)
             {
-                // still out of reach: what it stood on may be gone for good; let go as before
+                // still out of reach, or still nothing under it: what it stood on may be gone for good, or it was saved a
+                // little into the ground (a car's pivot under the terrain: the ray starts under a one-sided collider and
+                // never finds it, and the car stayed frozen for good); let go as before
                 _held.Remove(id); _reach.Remove(id); TimedOut++;
                 if (HitchPairs && Hitchable(__instance)) LetPartnersGo(__instance);
                 return true;

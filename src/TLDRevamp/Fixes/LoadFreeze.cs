@@ -28,6 +28,10 @@ namespace TLDRevamp.Fixes
     {
         public static bool Enabled = true;
         public static float MinS = 2f, MaxS = 30f, SettleS = 1.5f, SettleMs = 3f, SettleTurn = 3f, SettleDepen = 1f;
+        /// A car or trailer with nothing at all under it after this long is not waited for (a car saved a little into the
+        /// ground: its ray starts under the terrain's one-sided collider) — the whole world stayed frozen for MaxS at every
+        /// load of such a save. One with something far under it (a floor still loading) is waited for until MaxS.
+        public static float NothingUnderS = 5f;
         public static long Loads, Releases, TimedOut, Frozen, Clamped;
         public static float ClampedTop;
         public static string Last = "", Waiting = "";
@@ -52,6 +56,7 @@ namespace TLDRevamp.Fixes
                 _holding = map != null && Enabled && Net.Mp.Client == null;
                 if (_holding) Loads++;
             }
+            if (_settle.Count > 0 && Time.realtimeSinceStartup > _settleUntil + 1f) EndSettle();   // FixedTick didn't get to it
             if (!_holding) return;
             if (!Enabled || Net.Mp.Client != null || Net.JoinLoading.Showing) { Release("switched off or joining", false); return; }
             var pl = mainscript.s != null ? mainscript.s.player : null;
@@ -107,7 +112,8 @@ namespace TLDRevamp.Fixes
             {
                 if (it == null || it.RB == null || !it.RB.isKinematic || it.buried || !UnfreezeOnGround.Hitchable(it)) continue;
                 if ((it.transform.position - p).sqrMagnitude > reach * reach) continue;
-                if (UnfreezeOnGround.OnGround(it, it.GetInstanceID(), out _)) continue;
+                if (UnfreezeOnGround.OnGround(it, it.GetInstanceID(), out float nearest)) continue;
+                if (nearest == float.MaxValue && Time.realtimeSinceStartup - _first > NothingUnderS) continue;
                 waiting++; first ??= it.name;
             }
             if (waiting > 0) { Waiting = $"the ground under {waiting} vehicle(s) ({first})"; return false; }
@@ -142,9 +148,10 @@ namespace TLDRevamp.Fixes
         {
             EndSettle();
             Clamped = 0; ClampedTop = 0;
+            var own = mainscript.s != null && mainscript.s.player != null ? mainscript.s.player.transform.root : null;
             foreach (var rb in Object.FindObjectsOfType<Rigidbody>())
             {
-                if (rb == null || rb.isKinematic) continue;
+                if (rb == null || rb.isKinematic || rb.transform.root == own) continue;
                 _settle.Add(new KeyValuePair<Rigidbody, float>(rb, rb.maxDepenetrationVelocity));
                 rb.maxDepenetrationVelocity = SettleDepen;
             }
