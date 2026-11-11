@@ -301,6 +301,7 @@ namespace TLDRevamp
             // sharing as a whole ("unapproved JSON string"; SessionSettings, protocol 50, broke every mark share)
             "SessionSettings", "HitchRequest", "HitchCommand", "HitchFreeze", "HitchFrozen", "HitchResult",
             "ObjectCompareAsk", "ObjectCompareQuery", "ObjectCompareAnswer", "ObjectCompareRow", "ObjectCompareRoster",
+            "CarTune",
             "LateBehaviourUpdate", "LeaseDone", "LeaseFreed", "LeaseGrant", "LeaseReq", "LeaseTaken", "LiveUsable",
             "Loading.UpdatePreloading", "Main Thread", "MarkRename", "MemberGone", "Mesh.UploadMeshData", "MidHz", "MidM", "ModAdd",
             "ModAssigned", "ModChunk", "ModClaim", "ModClock", "ModEdit", "ModEvent", "ModFetch", "ModOffer", "ModOwner",
