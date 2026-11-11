@@ -117,6 +117,10 @@ A mod's objects are usually invisible to that:
   on the other machines (it isn't in any game save record);
 - a mod that reacts to player input (a button, a key, a menu) runs only on the machine of the player who pressed it.
 
+A mod that only changes a car's tuning (final drive, gear ratios, wheel positions, suspension travel, which wheels drive and
+steer) needs none of this: the session shares those values for every car itself and keeps them with the world save
+(`Entities.CarTune`, `CarTuneSave`). A wheel's radius, mass and grip follow its tyre part, which the records carry.
+
 The plan: a small public API so a mod can say "this object is shared", "this is its state" and "this happened",
 and the session does the rest (ownership, joiners, players far away, saving).
 

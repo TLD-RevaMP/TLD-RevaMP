@@ -438,6 +438,7 @@ namespace TLDRevamp.Net
             GrabRefusedTick();
             RefetchLaterTick();
             BreakWaitTick();
+            CarTuneTick();
             WorldBreakTick();
             PoiCensusTick();
             float dt = Time.unscaledDeltaTime;
@@ -812,6 +813,7 @@ namespace TLDRevamp.Net
                 case PlayerSound: ServerPlayerSound(from, r); break;
                 case BreakHit: ServerBreakHit(from, r); break;
                 case BreakFx: ServerKeepBreak(r); ServerFwdAll(from, r, true); break;
+                case CarTune: if (ServerKeepTune(from, r)) ServerFwdAll(from, r, true); break;
                 case WorldBreak: ServerKeepWorldBreak(r); ServerFwdAll(from, r, true); break;
                 case AiState:
                 {
@@ -1320,6 +1322,7 @@ namespace TLDRevamp.Net
                 case PlayerSound: ApplyPlayerSound(r); break;
                 case BreakHit: ApplyBreakHit(r); break;
                 case BreakFx: ApplyBreakFx(r); break;
+                case CarTune: ApplyCarTune(r); break;
                 case WorldBreak: ApplyWorldBreak(r); break;
                 case AiState: ApplyAiState(r); break;
                 case AiSound: ApplyAiSound(r); break;

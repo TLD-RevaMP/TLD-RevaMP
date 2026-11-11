@@ -193,7 +193,8 @@ namespace TLDRevamp.Net
                         if (ws[i].W2 != null) { ws[i].W2.GetWorldPose(out var p2, out _); pos = (pos + p2) * 0.5f; }
                     }
                     // where the wheel sits in its suspension: 0 = the collider's center (fully compressed), 1 = center −
-                    // suspensionDistance (hanging). Center and distance come from the prefab (the game never changes them),
+                    // suspensionDistance (hanging). Center and distance are the prefab's (the game never changes them) or a tuning
+                    // that every machine has applied (Entities.CarTune),
                     // so both machines turn the fraction back into the same place. Before v0.64.5 this was the distance from
                     // the collider's origin, packed into ±25.4 cm — vans and pickups have center.y −0.25 and hang to 0.45:
                     // their copies' wheels sat up to 0.2 m too high (leasepair 3b, wheelprobe.py).

@@ -910,6 +910,7 @@ namespace TLDRevamp
                         case "grip": return ma.Length > 1 ? Net.Entities.GripTest(ma) : Net.Entities.GripStatus();
                         case "ragdoll": return ma.Length > 2 ? Net.Entities.RagdollTest(uint.Parse(ma[1]), ma[2]) : Net.Entities.RagdollStatus(uint.Parse(ma[1]));
                         case "carsig": return Net.Entities.CarSignals(uint.Parse(ma[1]));
+                        case "tune": return ma.Length > 1 ? Net.Entities.CarTuneDiag(uint.Parse(ma[1])) : Net.CarTuneSave.Stats();
                         case "blood": return Net.Entities.BloodTest(uint.Parse(ma[1]), ma.Length > 2 ? ma[2] : "");
                         case "key": return Net.Entities.KeyTest(uint.Parse(ma[1]), ma.Length > 2 ? float.Parse(ma[2], System.Globalization.CultureInfo.InvariantCulture) : 0f);
                         case "radiocar": return Net.Entities.RadioCar(uint.Parse(ma[1]));

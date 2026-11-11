@@ -281,7 +281,7 @@ namespace TLDRevamp.Net
             }
             // the lease table, and the players' records (PlayerSave) - each with the copies it writes on the way
             private static string[] SideFiles => PlayerSave.WithSaveFile
-                ? new[] { ".leases", ".players", ".players.bak", ".players.tmp" } : new[] { ".leases" };
+                ? new[] { ".leases", ".players", ".players.bak", ".players.tmp", ".tune" } : new[] { ".leases", ".tune" };
             private static void Del(string p) { if (System.IO.File.Exists(p)) System.IO.File.Delete(p); }
             private static void Mv(string a, string b) { if (System.IO.File.Exists(a)) System.IO.File.Move(a, b); }
         }

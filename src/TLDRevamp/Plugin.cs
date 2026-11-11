@@ -365,7 +365,7 @@ namespace TLDRevamp
             } catch (Exception e) { Fault(1, "replay/camera", e); }
             try { Fixes.TerrainHorizon.Tick(); Fixes.OpenXrBridge.Tick(); Fixes.VrContractBridge.Tick(); MpLab.Tick(); Net.NetLab.Tick(); } catch (Exception e) { Fault(2, "terrain/vr/labs", e); }
             try { Net.Mp.Tick(); } catch (Exception e) { Fault(3, "multiplayer", e); }
-            try { Net.PlayerSave.Tick(); Net.Tpa.Tick(); } catch (Exception e) { Fault(4, "player save/tpa", e); }
+            try { Net.PlayerSave.Tick(); Net.Tpa.Tick(); Net.CarTuneSave.Tick(); } catch (Exception e) { Fault(4, "player save/tpa", e); }
             try { Net.Voice.Tick(); Net.Chat.Tick(); } catch (Exception e) { Fault(5, "voice/chat", e); }
             try { Net.VehicleLab.Tick(); Net.StreamLab.Tick(); Fixes.TinyRendererCull.Tick(); WorldGenLab.AllocTick(); RenderLab.Tick(); RebaseLab.Tick(); Fixes.RebaseParticles.Tick(); Net.DedicatedServer.Tick(); } catch (Exception e) { Fault(6, "labs/cull/server", e); }
             try { ModHost.Tick(); } catch (Exception e) { Fault(7, "mods", e); }

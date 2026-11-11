@@ -140,6 +140,7 @@ breakables, trailers or mod objects.
 | 110 | JoinLoading | s>c | session | - | Manifest, then an end marker for the join screen. |
 | 111 | SessionSettings | s>c | session | - | Refused unless it carries this host's token. Sent again at Ready. |
 | 112 | WorldBreak | both | state | `ServerWorldBreaksTo` for later players; `WorldBreakTick` when near | Kept for the session, 4096 at most. A piece that never appears here is looked for less and less often. |
+| 113 | CarTune | both | stream | `SendTuneTo` for later players; `CarTuneTick` applies it again when the car is placed anew; the owner sends a tuned car again every `CarTuneResendS` | Only from the car's owner; the server keeps the latest per car. Unreadable or out of range: refused, not passed on. |
 
 ## Not settled by the code
 

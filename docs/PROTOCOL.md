@@ -18,6 +18,7 @@ The public release v0.69.1 carries 28. The numbers above that were raised on dev
 
 ## 61
 
+- CarTune (113): a car's tuning (final drive, gear ratios, wheel positions, suspension travel, which wheels drive and steer) from its owner, kept by the server and sent with the car to later players (`Entities.CarTune`)
 - Hello ends with the joiner's game data hash and its list of other mods' patches on the world generators (`WorldCheck`); the host refuses a different game, other data files or other generator patches
 - a glued member's place in the census rows, its pose on request
 - a Record can end with the ids of what came back from a Restore (`PlayerSave.RestoreConfirmed`)
