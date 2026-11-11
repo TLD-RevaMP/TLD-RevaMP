@@ -22,6 +22,7 @@ namespace TLDRevamp.Net
         public static float RangeM = 60f;
         public const int Rate = 24000;   // what Steam decodes to (GetVoiceOptimalSampleRate on both machines: 24000)
         public const float PrimeS = 0.08f, MaxLagS = 0.35f, PollS = 0.04f, TailS = 0.5f;
+        public static float HardLagS = 1.2f, CatchUp = 1.05f, FadeS = 0.004f;
         public const byte CodecSteam = 0, CodecPcm16 = 1;   // PCM16: test tone only (the bridge's `mp voice tone`)
         /// The codec byte's top bit: this voice goes to everyone. A client sets it while the everyone key is held;
         /// the host's relay sets it on what it sends when the voice went to everyone (the key, or the session setting).
@@ -35,7 +36,7 @@ namespace TLDRevamp.Net
 
         // ---- sending
         private static bool _recording, _toEveryone;
-        private static float _tailUntil, _nextPoll, _lastSent = -10f;
+        private static float _tailUntil, _nextPoll, _lastSent = -10f, _captureRetryAt;
         private static ushort _seq;
         private static readonly byte[] _enc = new byte[8192];
         private static readonly NetWriter W = new NetWriter();
@@ -50,7 +51,7 @@ namespace TLDRevamp.Net
         {
             float now = Time.unscaledTime;
             bool all = Session.InGame && Setting != Mode.Off && EveryoneKeyHeld();
-            bool want = Session.InGame && Setting != Mode.Off && SteamTransport.SteamReady && (Setting == Mode.OpenMic || all || TalkKeyHeld());
+            bool want = Session.InGame && Setting != Mode.Off && SteamTransport.SteamReady && now >= _captureRetryAt && (Setting == Mode.OpenMic || all || TalkKeyHeld());
             if (want) _toEveryone = all;   // the tail after release keeps the audience the words started with
             try
             {
@@ -67,7 +68,9 @@ namespace TLDRevamp.Net
                     }
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning("voice capture: " + e.Message); Setting = Mode.Off; }
+            // a capture error waits a moment and tries again: it set the player's voice setting to Off, which the next
+            // settings save could keep
+            catch (Exception e) { Plugin.Log.LogWarning("voice capture: " + e.Message); _recording = false; _captureRetryAt = now + 5f; }
             ToneTick(now);
             Speakers(now);
         }
@@ -122,6 +125,7 @@ namespace TLDRevamp.Net
             public float LastAt = -10f; public volatile float Level;
             public long Underruns, Dropped, Samples, Fills;
             public float Step, Frac, Prev, Cur;   // resampling Rate → the output rate (linear)
+            public float Fade, FadeStep, Boost = 1f;   // the gain that fades in and out (no click at a gap); the volume above 100%
             public volatile float Prime = PrimeS;  // this talker's buffer before playing (AdaptiveJitter)
             public bool Everyone;                  // the last packet was sent to everyone: played 2D
             public readonly float[] Gaps = new float[30]; public int GapN;   // recent arrival gaps within an utterance
@@ -189,7 +193,9 @@ namespace TLDRevamp.Net
                     sp.Wp = (sp.Wp + 1) % sp.Ring.Length;
                     if (sp.Count < sp.Ring.Length) sp.Count++; else sp.Rp = (sp.Rp + 1) % sp.Ring.Length;
                 }
-                int max = (int)(Rate * (MaxLagS - PrimeS + sp.Prime));
+                // beyond the lag cap it is played a little faster until it is back (Fill); only a backlog far past it
+                // (HardLagS) is dropped at once — a burst after a sender's hitch lost ~0.4 s of words in one jump
+                int max = (int)(Rate * (HardLagS + sp.Prime));
                 if (sp.Count > max) { int drop = sp.Count - (int)(Rate * sp.Prime); sp.Rp = (sp.Rp + drop) % sp.Ring.Length; sp.Count -= drop; sp.Dropped += drop; }
             }
             sp.Samples += samples;
@@ -230,8 +236,11 @@ namespace TLDRevamp.Net
             if (sp.Src != null && sp.Head == head) return sp;
             if (sp.Src != null) UnityEngine.Object.Destroy(sp.Src.gameObject);
             sp.Head = head;
+            // at the scene's root, moved to the head every frame (Speakers): under the body it went silent whenever the game
+            // or the mod switched the body off — a player sitting in a car far off (FarHidden), a dead player — and "to
+            // everyone" was meant exactly for the far ones
             var go = new GameObject("TLDRevampVoice" + id);
-            go.transform.SetParent(head, false);
+            go.transform.position = head.position;
             var src = go.AddComponent<AudioSource>();
             var tpl = Template();
             if (tpl != null)
@@ -249,7 +258,7 @@ namespace TLDRevamp.Net
             }
             src.maxDistance = RangeM;
             src.spatialBlend = 1f; src.dopplerLevel = 0f; src.priority = 16;
-            src.volume = Volume;
+            src.volume = Mathf.Min(1f, Volume); sp.Boost = Mathf.Max(1f, Volume);   // AudioSource.volume stops at 1: the rest in Fill
             src.loop = true;
             int outRate = AudioSettings.outputSampleRate;
             if (_one == null)
@@ -258,7 +267,7 @@ namespace TLDRevamp.Net
                 var ones = new float[outRate]; for (int i = 0; i < ones.Length; i++) ones[i] = 1f;
                 _one.SetData(ones, 0);
             }
-            lock (sp) { sp.Step = (float)Rate / Mathf.Max(8000, outRate); sp.Frac = 0f; sp.Prev = sp.Cur = 0f; }
+            lock (sp) { sp.Step = (float)Rate / Mathf.Max(8000, outRate); sp.Frac = 0f; sp.Prev = sp.Cur = 0f; sp.Fade = 0f; sp.FadeStep = 1f / Mathf.Max(1f, FadeS * outRate); }
             src.ignoreListenerVolume = false;
             src.clip = _one;
             go.AddComponent<VoiceOut>().Sp = sp;
@@ -290,21 +299,29 @@ namespace TLDRevamp.Net
             lock (sp)
             {
                 if (!sp.Primed && sp.Count >= (int)(Rate * sp.Prime)) sp.Primed = true;
+                // more than the lag cap waiting: a little faster until it's back (5 %: 50 ms caught up a second, unheard)
+                float step = sp.Step * (sp.Count > (int)(Rate * (MaxLagS - PrimeS + sp.Prime)) ? CatchUp : 1f);
                 for (int f = 0; f < frames; f++)
                 {
                     float v = 0f;
                     if (sp.Primed)
                     {
-                        sp.Frac += sp.Step;
+                        sp.Frac += step;
                         while (sp.Frac >= 1f)
                         {
-                            if (sp.Count == 0) { sp.Primed = false; sp.Underruns++; sp.Prev = sp.Cur = 0f; sp.Frac = 0f; break; }
+                            // ran dry: hold the last sample and fade it out (it dropped to 0 at once: a click, then the gap)
+                            if (sp.Count == 0) { sp.Primed = false; sp.Underruns++; sp.Prev = sp.Cur; sp.Frac = 0f; break; }
                             sp.Prev = sp.Cur; sp.Cur = sp.Ring[sp.Rp];
                             sp.Rp = (sp.Rp + 1) % sp.Ring.Length; sp.Count--;
                             sp.Frac -= 1f;
                         }
-                        v = sp.Prev + (sp.Cur - sp.Prev) * sp.Frac;
+                        v = sp.Primed ? sp.Prev + (sp.Cur - sp.Prev) * sp.Frac : sp.Cur;
                     }
+                    else v = sp.Cur;
+                    sp.Fade = sp.Primed ? Math.Min(1f, sp.Fade + sp.FadeStep) : Math.Max(0f, sp.Fade - sp.FadeStep);
+                    if (sp.Fade == 0f && !sp.Primed) sp.Cur = sp.Prev = 0f;
+                    v *= sp.Fade * sp.Boost;
+                    if (v > 0.9f || v < -0.9f) v = Math.Sign(v) * (0.9f + 0.1f * (float)Math.Tanh((Math.Abs(v) - 0.9f) / 0.1f));   // a boost never clips hard
                     sum += v * v;
                     int b = f * channels;
                     for (int c = 0; c < channels; c++) data[b + c] *= v;
@@ -320,7 +337,11 @@ namespace TLDRevamp.Net
             foreach (var sp in _speakers.Values)
             {
                 if (RemotePlayers.Head(sp.Id) == null && now - sp.LastAt > 2f) (gone ?? (gone = new List<int>())).Add(sp.Id);
-                else if (sp.Src != null) sp.Src.volume = Volume;
+                else if (sp.Src != null)
+                {
+                    sp.Src.volume = Mathf.Min(1f, Volume); sp.Boost = Mathf.Max(1f, Volume);
+                    if (sp.Head != null) sp.Src.transform.position = sp.Head.position;   // an inactive body's head still has its place
+                }
             }
             if (gone != null) foreach (int id in gone) Drop(id);
         }
