@@ -72,8 +72,9 @@ namespace TLDRevamp.Net
             cache.Parent = null; cache.Item = cache.Index = -1; cache.Chain.Clear(); cache.Candidates.Clear(); cache.Streaming.Clear();
             cache.AddressParent = null; cache.AddressItem = cache.AddressIndex = -1;
             for (var a = mount.transform; a != null; a = a.parent) cache.Chain.Add(a);
+            var set = LookupSet();   // was every shared object for each transform up the mount chain
             foreach (var a in cache.Chain)
-                foreach (var c in ByNet.Values)
+                foreach (var c in set)
                 {
                     if (c == e || c.Root == null || c.Root.transform != a) continue;
                     // Attached/worn entities do not stream a world frame. Use world poses unless a streaming ancestor

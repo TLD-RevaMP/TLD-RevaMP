@@ -25,9 +25,11 @@ namespace TLDRevamp.Net
         {
             net = 0; proxy = false;
             if (root == null) return false;
-            foreach (var e in ByNet.Values)
-                if (e.Root != null && e.Root.transform.root == root) { net = e.NetId; proxy = e.Proxy; return true; }
-            return false;
+            // the object whose own transform is the root (a car, not a can stored in it: parented into the car, it took
+            // the car's place in whatever order the table had them)
+            var e = PlacedOfTransform(root);
+            if (e == null) return false;
+            net = e.NetId; proxy = e.Proxy; return true;
         }
 
         /// Applied on a shared entity's root while it is simulated here; removed when it becomes a proxy.
@@ -46,11 +48,7 @@ namespace TLDRevamp.Net
                 var otherRb = c.rigidbody;
                 if (otherRb == null) return;
                 // the other body must belong to another machine's entity
-                Ent other = null;
-                var otherGo = otherRb.transform.root.gameObject;
-                foreach (var e in ByNet.Values)
-                    if (e.Root != null && (e.Root.gameObject == otherGo || e.Root.transform == otherRb.transform.root))
-                    { other = e; break; }
+                Ent other = PlacedOfTransform(otherRb.transform.root);   // every collision callback walked every object
                 if (other == null || !other.Proxy || other.NetId == NetId) return;
                 var impulse = -c.impulse;                       // what the other body receives (equal and opposite)
                 if (impulse.sqrMagnitude < MinImpulse * MinImpulse) return;

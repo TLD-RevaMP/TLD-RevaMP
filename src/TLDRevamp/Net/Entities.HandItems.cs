@@ -64,7 +64,7 @@ namespace TLDRevamp.Net
         {
             if (!InSession) return;
             double now = Time.timeAsDouble;
-            foreach (var e in ByNet.Values)
+            foreach (var e in Placed())
             {
                 if (e.Root == null || !HandManaged(e)) continue;
                 var hand = ItemHand(e);

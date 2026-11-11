@@ -113,9 +113,11 @@ namespace TLDRevamp.Net
                 return;
             }
             if (fromTank) return;   // own tanks change all the time (fuel burn): the regular pass is enough
-            foreach (var e in ByNet.Values)
-                if (e == group && !e.Proxy) { e.ResyncAcc = Mathf.Max(e.ResyncAcc, ResyncInterval - 0.2f); return; }
+            if (group != null && !group.Proxy && ByNet.TryGetValue(group.NetId, out var g) && g == group) group.ResyncAcc = Mathf.Max(group.ResyncAcc, ResyncInterval - 0.2f);
         }
+
+        private sealed class OneGroup { private readonly List<Ent> _l = new List<Ent>(1); public List<Ent> Set(Ent e) { _l.Clear(); if (e != null && ByNet.TryGetValue(e.NetId, out var now) && now == e) _l.Add(e); return _l; } }
+        private static readonly OneGroup _oneGroup = new OneGroup();
 
         private static tosaveitemscript ItemOf(Component c, uint id, bool hasId)
         {
@@ -136,7 +138,7 @@ namespace TLDRevamp.Net
                 _editFlushed.Add(it);
                 if (it == null) continue;
                 var group = EditEntityOf(it);
-                foreach (var e in ByNet.Values)
+                foreach (var e in _oneGroup.Set(group))   // the group itself (it walked every object to find it)
                 {
                     if (e != group || !e.Proxy || e.Items == null) continue;
                     int idx = e.Items.IndexOf(it);

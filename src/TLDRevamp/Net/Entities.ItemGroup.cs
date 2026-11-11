@@ -10,7 +10,7 @@ namespace TLDRevamp.Net
             if (it == null) return null;
             var own = OwnEntity(it);
             if (own != null) return own;
-            foreach (var e in ByNet.Values)
+            foreach (var e in LookupSet())   // a group with this item placed has its root placed
             {
                 if (e.Items == null) continue;
                 int idx = e.Items.IndexOf(it);

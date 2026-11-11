@@ -42,7 +42,7 @@ namespace TLDRevamp.Net
             var root = c.transform.root;
             NetOf(root, out uint net, out _);
             if (net == 0 && root.GetComponent<Rigidbody>() != null)
-                foreach (var group in ByNet.Values) if (group.Root != null && group.Root.partslotscripts != null)
+                foreach (var group in Placed()) if (group.Root != null && group.Root.partslotscripts != null)
                     foreach (var slot in group.Root.partslotscripts) if (slot != null && slot.transform.root == root) return group.NetId;
             return net;
         }
@@ -62,7 +62,7 @@ namespace TLDRevamp.Net
             TelemetryFocus[4] = p != null ? TelemetryNet(p.inHandP) : 0;
             Array.Copy(TelemetryRecent, 0, TelemetryFocus, 5, 4);
             int at = 9;
-            foreach (var e in ByNet.Values) if (e.Held && e.OwnerId != MyId)
+            foreach (var e in Placed()) if (e.Held && e.OwnerId != MyId)
             {
                 TelemetryRemoteRecent.Observe(e.NetId, e.Held, e.OwnerId, MyId, now);
                 if (at < TelemetryFocus.Length - 4) TelemetryFocus[at++] = e.NetId;

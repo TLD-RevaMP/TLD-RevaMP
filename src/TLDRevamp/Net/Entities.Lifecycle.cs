@@ -33,8 +33,9 @@ namespace TLDRevamp.Net
                 var ddata = savedatascript.s != null ? savedatascript.s.data : null;
                 if (ddata != null && ddata.itemData != null && savedatascript.IndexOfID(ddata.itemData.items, __instance.idInSave, out _))
                 {
-                    if (AnomalyWatch)
-                        foreach (var ea in ByNet.Values) if (ea.Root == __instance) { AnomalyStoreOut(ea, __instance); break; }
+                    // the index, not a walk of every shared object with Unity's == for each item streamed out (a car's ~100
+                    // parts: ~1.2 M comparisons, a ~100 ms hitch, in a world of ~12,000)
+                    if (AnomalyWatch) { var ea = PlacedOf(__instance, rebuild: false); if (ea != null) AnomalyStoreOut(ea, __instance); }
                     if (StoreOutTrace > 0)
                         foreach (var e0 in ByNet.Values)
                         {

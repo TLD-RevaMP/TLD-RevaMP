@@ -85,7 +85,7 @@ namespace TLDRevamp.Net
         {
             if (_rideCars.TryGetValue(car, out var e) && e.Root != null && e.Root.car == car && ByNet.ContainsKey(e.NetId)) return e;
             e = null;
-            foreach (var x in ByNet.Values) if (x.Root != null && x.Root.car == car && x.PartIndex < 0) { e = x; break; }
+            foreach (var x in LookupSet()) if (x.Root != null && x.Root.car == car && x.PartIndex < 0) { e = x; break; }
             if (e != null) _rideCars[car] = e; else _rideCars.Remove(car);
             return e;
         }

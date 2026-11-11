@@ -29,6 +29,7 @@ namespace TLDRevamp.Net
             internal Group Record; internal HashSet<int> Gone; internal List<uint> Parts = new List<uint>(); internal Vector3d Where;
         }
         internal class Group { internal List<save_item> items = new List<save_item>(); }
+        private static List<Ent> LookupSet() => new List<Ent>(ByNet.Values);   // Entities.Placed: every object here is placed
         const byte PoiUsable = 52;
         static bool _applyingPoi;
         static long PoiUsablesSent, PoiUsablesApplied, PoiUsablesUnplaced, PoiRefusedValues;

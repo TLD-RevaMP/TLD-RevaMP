@@ -81,8 +81,8 @@ namespace TLDRevamp.Net
 
         private static Ent OwnedRoot(Transform root)
         {
-            foreach (var e in ByNet.Values) if (e.Root != null && e.PartIndex < 0 && e.Root.transform == root) return e;
-            return null;
+            var e = PlacedOfTransform(root);   // 20 times a second on plain ground: it walked every shared object
+            return e != null && e.PartIndex < 0 ? e : null;
         }
 
         /// Test (`mp footprobe`): what our player stands on — the game's ground sensor, the ray down, the feet's IK targets

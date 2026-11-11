@@ -304,7 +304,9 @@ namespace TLDRevamp.Net
         // ---------------------------------------------------------------- helpers
         private static Ent EntOfRoot(Transform root)
         {
-            foreach (var e in ByNet.Values) if (e.Root != null && e.Root.transform.root == root) return e;
+            var own = PlacedOfTransform(root);
+            if (own != null) return own;
+            foreach (var e in LookupSet()) if (e.Root != null && e.Root.transform.root == root) return e;
             return null;
         }
 

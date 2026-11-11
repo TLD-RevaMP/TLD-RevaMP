@@ -98,7 +98,7 @@ namespace TLDRevamp.Net
             if (CopiesMoveByBody) BodyMotionTick(dt);
             else foreach (var e in ByNet.Values) if (e.MovedByBody) StopBodyMotion(e);   // switched off: back to transform writes
             StandInterpTick();
-            foreach (var e in ByNet.Values)
+            foreach (var e in Placed())   // a stored-away copy stops being physical in StoredAway
             {
                 if (!e.Proxy || e.Root == null || e.Root.car == null || e.Ip == null || !e.Ip.Ready) { if (e.Physical && (e.Root == null || !e.Proxy)) e.Physical = false; continue; }
                 var rb = e.Root.GetComponent<Rigidbody>();

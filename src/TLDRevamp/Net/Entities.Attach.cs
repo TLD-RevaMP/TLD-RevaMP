@@ -112,11 +112,9 @@ namespace TLDRevamp.Net
         /// DevTest session of 2026-11-10. Every object only when one was shared or bound since the list was made.
         private static Ent OwnEntity(tosaveitemscript ts)
         {
-            if (LoopPlacedOnly && !ReferenceEquals(ts, null))
-            {
-                foreach (var e in Placed()) if (ReferenceEquals(e.Root, ts)) return e;
-                if (!_placedDirty && ByNet.Count == _netsSeen) return null;
-            }
+            // null: no object (it matched the first stored-away one, whose Root is null too, after a walk of every object)
+            if (ReferenceEquals(ts, null) || ts == null) return null;
+            if (LoopPlacedOnly) return PlacedOf(ts);
             foreach (var e in ByNet.Values) if (e.Root == ts) return e;
             return null;
         }
@@ -168,7 +166,7 @@ namespace TLDRevamp.Net
                 var pt = Fixes.SlotOwnerSave.Owner(at);   // a slot outside its owner's hierarchy (Bus01's rear wheels)
                 Ent pa = null;
                 if (pt != null)
-                    foreach (var e in ByNet.Values)
+                    foreach (var e in LookupSet())
                     {
                         if (e == pe || e.Root == null) continue;
                         if (e.Root == pt) { pa = e; parentIdx = 0; break; }

@@ -24,6 +24,17 @@ namespace TLDRevamp.Net
         public static int PlacedCount;
 
         private static readonly List<Ent> _placed = new List<Ent>(), _all = new List<Ent>();
+        /// The full pass's indexes: an item, and the item's own transform, to its shared object (a group before a part of
+        /// it). Lookups by reference: Unity's == on every object was the cost. Kept with the list; an entry whose object was
+        /// stored away since is checked by the lookup.
+        private sealed class RefEq<T> : IEqualityComparer<T> where T : class
+        {
+            public static readonly RefEq<T> I = new RefEq<T>();
+            public bool Equals(T a, T b) => ReferenceEquals(a, b);
+            public int GetHashCode(T o) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(o);
+        }
+        private static readonly Dictionary<tosaveitemscript, Ent> _byItem = new Dictionary<tosaveitemscript, Ent>(RefEq<tosaveitemscript>.I);
+        private static readonly Dictionary<Transform, Ent> _byOwn = new Dictionary<Transform, Ent>(RefEq<Transform>.I);
         private static int _placedFrame = -1, _fullFrame = -1000, _itemsSeen = -1, _netsSeen = -1, _dormantFrame = -1000;
         private static bool _placedDirty = true;
         /// Host: the server's objects locked in something (a container, a car's bed), which follow it at its states.
@@ -40,12 +51,13 @@ namespace TLDRevamp.Net
             if (_placedDirty || items != _itemsSeen || ByNet.Count != _netsSeen || Time.frameCount - _fullFrame >= FullEveryFrames)
             {
                 _placedDirty = false; _itemsSeen = items; _netsSeen = ByNet.Count; _fullFrame = Time.frameCount; PlacedFullPasses++;
-                _placed.Clear();
+                _placed.Clear(); _byItem.Clear(); _byOwn.Clear();
                 foreach (var e in ByNet.Values)
                 {
                     if (!ReferenceEquals(e.Root, null) && e.Root == null) StoredAway(e);
                     if (ReferenceEquals(e.Root, null) && (e.RootId == 0 || !Resolve(e))) continue;
                     _placed.Add(e);
+                    if (!_byItem.TryGetValue(e.Root, out var o) || (o.PartIndex >= 0 && e.PartIndex < 0)) { _byItem[e.Root] = e; _byOwn[e.Root.transform] = e; }
                 }
             }
             else
@@ -63,11 +75,60 @@ namespace TLDRevamp.Net
         }
 
         /// The game destroyed its item: a plain null from now on, and what a copy moved by its body had to stop
-        /// (BodyMotionTick did it for every unplaced object each step).
+        /// (BodyMotionTick did it for every unplaced object each step), and a physical copy (the physical loop).
         private static void StoredAway(Ent e)
         {
             e.Root = null;
             if (e.MovedByBody) e.MovedByBody = false;
+            if (e.Physical) e.Physical = false;
+        }
+
+        /// What a lookup searches: this frame's placed objects, or every object when one was shared or bound since the list
+        /// was made (it would be missing).
+        private static List<Ent> LookupSet()
+        {
+            var p = Placed();
+            return LoopPlacedOnly && (_placedDirty || ByNet.Count != _netsSeen) ? AllEnts() : p;
+        }
+
+        /// The shared object whose item is `ts` (a group before a part of it), by reference.
+        internal static Ent PlacedOf(tosaveitemscript ts, bool rebuild = true)
+        {
+            if (ReferenceEquals(ts, null)) return null;
+            if (LoopPlacedOnly)
+            {
+                if (rebuild) Placed();
+                if (_byItem.TryGetValue(ts, out var e) && ReferenceEquals(e.Root, ts) && ByNet.TryGetValue(e.NetId, out var now) && now == e) return e;
+                if (!_placedDirty && ByNet.Count == _netsSeen) return null;
+            }
+            Ent best = null;
+            foreach (var e in ByNet.Values) if (ReferenceEquals(e.Root, ts) && (best == null || e.PartIndex < 0 && best.PartIndex >= 0)) best = e;
+            return best;
+        }
+
+        /// The shared object whose item's own transform is `t` (a car's root, not something stored in it).
+        internal static Ent PlacedOfTransform(Transform t)
+        {
+            if (ReferenceEquals(t, null)) return null;
+            if (LoopPlacedOnly)
+            {
+                Placed();
+                if (_byOwn.TryGetValue(t, out var e) && !ReferenceEquals(e.Root, null) && e.Root != null && ReferenceEquals(e.Root.transform, t) && ByNet.TryGetValue(e.NetId, out var now) && now == e) return e;
+                if (!_placedDirty && ByNet.Count == _netsSeen) return null;
+            }
+            Ent best = null;
+            foreach (var e in ByNet.Values)
+                if (!ReferenceEquals(e.Root, null) && e.Root != null && ReferenceEquals(e.Root.transform, t) && (best == null || e.PartIndex < 0 && best.PartIndex >= 0)) best = e;
+            return best;
+        }
+
+        /// The game's streaming placed items (once a second): bind them this frame, not up to FullEveryFrames later. As
+        /// many go out as come in while driving, so the counts didn't change and new objects waited for the fallback
+        /// pass: no states from their owner, a copy not yet a copy.
+        [HarmonyLib.HarmonyPatch(typeof(itemPlaceRemoveScript), nameof(itemPlaceRemoveScript.PlaceStuff))]
+        private static class PlacedAfterStreaming
+        {
+            [HarmonyLib.HarmonyPostfix] private static void Postfix() => _placedDirty = true;
         }
 
         /// Every shared object (the loops with LoopPlacedOnly off).

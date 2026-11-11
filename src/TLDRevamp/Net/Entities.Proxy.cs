@@ -145,7 +145,7 @@ namespace TLDRevamp.Net
                 // keyed by the copy's own root object: a copy stored in a container is parented into that car, and keyed by
                 // its transform.root it took the car's place — the jerry can was its own "container", always inside it,
                 // so a can set down 3 m from the car stayed on the back seat on every other screen (pallet.py C)
-                foreach (var e in ByNet.Values)
+                foreach (var e in Placed())
                     if (e.Proxy && e.Root != null) _proxyByRoot[ProxyByOwnRoot ? e.Root.transform : e.Root.transform.root] = e;
             }
             return _proxyByRoot.TryGetValue(root, out var pe) ? pe.LastVel : (Vector3?)null;
@@ -224,7 +224,7 @@ namespace TLDRevamp.Net
         {
             if (e.Root == null) return false;
             var p = e.Root.transform.position; float r2 = TorqueRadiusM * TorqueRadiusM;
-            foreach (var o in ByNet.Values)
+            foreach (var o in Placed())
                 if (o.Proxy && o.Root != null && o.PartIndex < 0 && o.Root.car != null && (o.Root.transform.position - p).sqrMagnitude < r2) return true;
             return false;
         }

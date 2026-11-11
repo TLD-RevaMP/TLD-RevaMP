@@ -246,7 +246,7 @@ namespace TLDRevamp.Net
         private static void CargoNearScan(float dt)
         {
             if (Time.time - _carBoundsAt > 10f) { _carBoundsAt = Time.time; _carBounds.Clear(); }
-            foreach (var e in ByNet.Values)
+            foreach (var e in Placed())
             {
                 if (!e.Proxy || e.Root == null || e.Root.car != null || !LooseItem(e) || e.Held || e.Stored || e.Physical || e.CrashTaking || !CargoBody(e)) continue;
                 var irb = e.Root.GetComponent<Rigidbody>();
@@ -639,7 +639,7 @@ namespace TLDRevamp.Net
             if (!CargoClaims || !ContentsFollowCar || car == null) return 0;
             int n = 0;
             _contentsScratch.Clear();
-            foreach (var e in ByNet.Values) if (ContentsCandidate(e)) _contentsScratch.Add(e);   // ClaimCargo changes owners: not while iterating
+            foreach (var e in LookupSet()) if (ContentsCandidate(e)) _contentsScratch.Add(e);   // ClaimCargo changes owners: not while iterating
             foreach (var e in _contentsScratch)
             {
                 if (!InCar(car, e, out bool stored) || !ClaimCargo(e, released: now, reason: ClaimReason.Contents)) continue;

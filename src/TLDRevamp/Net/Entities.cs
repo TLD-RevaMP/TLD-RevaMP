@@ -282,7 +282,7 @@ namespace TLDRevamp.Net
         {
             if (!InSession) return "{\"error\":\"not in a session\"}";
             if (root == null) return "{\"error\":\"nothing\"}";
-            foreach (var e0 in ByNet.Values) if (e0.Root == root) return "{\"already\":" + e0.NetId + "}";
+            foreach (var e0 in ByNet.Values) if (ReferenceEquals(e0.Root, root) || (e0.RootId != 0 && e0.RootId == root.idInSave && ReferenceEquals(e0.Root, null))) return "{\"already\":" + e0.NetId + "}";
             if (PendingShare.ContainsKey(root.idInSave)) return "{\"pending\":true}";
             RabbitBeforeShare(root);
             var items = group ?? ItemSnapshot.Group(root);
@@ -403,7 +403,7 @@ namespace TLDRevamp.Net
             if (pl == null || !pl.Bsitting || pl.seat == null) return;
             if (!pl.seat.driverSeat0) return;   // passengers never claim — incl. shotgun (driverSeat1 = the front passenger)
             var root = pl.seat.transform.root;
-            foreach (var e in ByNet.Values)
+            foreach (var e in LookupSet())
                 if (e.Proxy && e.Root != null && e.Root.transform.root == root && (!DriveClaimRootOnly || e.Root.transform == root))
                 {
                     W.Reset(); WriteClaim(W, e.NetId, ClaimReason.DriverRetry); ToServer(W, true);

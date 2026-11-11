@@ -23,7 +23,7 @@ namespace TLDRevamp.Net
             if (g == null) { _gripNet = 0; return; }
             var root = g.transform.root;
             Ent e = null;
-            foreach (var x in ByNet.Values) if (x.Root != null && x.PartIndex < 0 && x.Root.transform.root == root) { e = x; break; }
+            e = PlacedOfTransform(root); if (e != null && e.PartIndex >= 0) e = null;   // the car itself, not a can stored in it
             if (e == null) return;
             if (!e.Proxy) { _gripNet = e.NetId; return; }
             if (_gripNet == e.NetId) { pl.StopPushGripping(); GripLost++; _gripNet = 0; return; }   // gone to another machine: not ours to hold
