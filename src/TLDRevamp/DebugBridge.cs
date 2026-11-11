@@ -1081,7 +1081,7 @@ namespace TLDRevamp
                     var ic = System.Globalization.CultureInfo.InvariantCulture;
                     return MpLab.Set(int.Parse(fa[0]), fa.Length > 1 ? float.Parse(fa[1], ic) : 25f, fa.Length > 2 ? float.Parse(fa[2], ic) : 5000f);
                 }
-                case "uidump": { var ua = arg.Split(' '); return UiLab.Dump(ua[0], ua.Length > 1 ? int.Parse(ua[1]) : 3); }
+                case "uidump": { var ua = arg.Split(' '); return UiLab.Dump(ua[0], ua.Length > 1 ? int.Parse(ua[1]) : 3, ua.Length > 2 && ua[2] == "full"); }
                 case "matshare": return RenderLab.MaterialSharing(arg);
                 case "instinfo": return RenderLab.InstancingInfo();
                 case "instancing": return RenderLab.InstancingOn();

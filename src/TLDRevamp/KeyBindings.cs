@@ -38,13 +38,19 @@ namespace TLDRevamp
         private static KeyCode[] _keys;
 
         /// Plugin, after binding its keys: the Keys section of the Revamp tab.
+        private const string HowTo = "Click a key, then press the new one. Hold Ctrl, Shift or Alt for a chord (Ctrl+Insert); a modifier pressed and let go " +
+                                     "on its own is the key itself (Right Shift). Backspace unbinds, Escape cancels. A key used twice shows which other action has it. " +
+                                     "Saved in BepInEx/config/tldrevamp.core.cfg, [Keys].";
         internal static void Register(params (string Name, ConfigEntry<KeyboardShortcut> Entry)[] binds)
         {
             All.Clear();
-            RevampSettings.Entries.Add(new RevampSettings.Entry { Kind = RevampSettings.Kind.Header, Label = "Keys",
-                Help = "Click a key, then press the new one. Hold Ctrl, Shift or Alt for a chord (Ctrl+Insert); a modifier pressed and let go " +
-                       "on its own is the key itself (Right Shift). Backspace unbinds, Escape cancels. A key used twice shows which other action has it. " +
-                       "Saved in BepInEx/config/tldrevamp.core.cfg, [Keys]." });
+            AddSection("Keys", HowTo, binds);
+        }
+
+        /// One more section of keys after Register's (Dev Mode keys: the game's own, on a page of their own).
+        internal static void AddSection(string header, string help, params (string Name, ConfigEntry<KeyboardShortcut> Entry)[] binds)
+        {
+            RevampSettings.Entries.Add(new RevampSettings.Entry { Kind = RevampSettings.Kind.Header, Label = header, Help = help });
             foreach (var (name, entry) in binds)
             {
                 if (entry == null) continue;
@@ -132,7 +138,7 @@ namespace TLDRevamp
                 bind.Entry.Value = new KeyboardShortcut(k);
                 RevampMenu.RefreshOpen();
             }
-            var sb = new System.Text.StringBuilder("{\"capturing\":").Append(_capturing != null ? Json.Str(_capturing.Name) : "null").Append(",\"devMenuPatched\":").Append(DevMenuKey.Patched ? "true" : "false").Append(",\"devModeKeys\":").Append(DevModeKeys.Status()).Append(",\"keys\":[");
+            var sb = new System.Text.StringBuilder("{\"capturing\":").Append(_capturing != null ? Json.Str(_capturing.Name) : "null").Append(",\"devMenuPatched\":").Append(DevMenuKey.Patched ? "true" : "false").Append(",\"devModeKeys\":").Append(DevModeKeys.Status()).Append(",\"devMenuList\":").Append(Json.Str(DevModeKeys.ListShown ?? "")).Append(",\"keys\":[");
             for (int i = 0; i < All.Count; i++) { if (i > 0) sb.Append(','); sb.Append("{\"name\":").Append(Json.Str(All[i].Name)).Append(",\"key\":").Append(Json.Str(Show(All[i]))).Append('}'); }
             return sb.Append("]}").ToString();
         }

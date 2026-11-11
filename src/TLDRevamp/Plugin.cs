@@ -204,15 +204,17 @@ namespace TLDRevamp
             KeyDevMenu = Config.Bind("Keys", "DevMenu", new BepInEx.Configuration.KeyboardShortcut(KeyCode.F1),
                 "The game's own developer menu (spawning, god mode, …), with Dev Mode on in the game's settings. F1 in the game; RevaMP lets it be changed.");
             // Settings → Revamp → Keys: each of these rebound in game (KeyBindings)
-            // the game's other Dev Mode keys (DevModeKeys) right under its F1 menu, unbound by default
-            var keyRows = new System.Collections.Generic.List<(string, BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut>)> { ("Developer menu (game, needs Dev Mode)", KeyDevMenu) };
-            keyRows.AddRange(DevModeKeys.Bind(Config));
-            keyRows.AddRange(new[] { ("Multiplayer screen", KeyMpScreen), ("Performance overlay", KeyOverlay),
+            KeyBindings.Register(("Multiplayer screen", KeyMpScreen), ("Performance overlay", KeyOverlay),
                 ("Debug report", KeyReport), ("Bug report", KeyRepro), ("Session marks", KeyMark), ("Item health", KeyItemHealth), ("Debug layout (V2)", KeyDebugLayout),
                 ("Item traffic", KeyItemTraffic), ("Debug view (Legacy)", KeyDebugView), ("Ownership labels (Legacy)", KeyOwnership), ("Owner ghost (Legacy)", KeyOwnerGhost),
                 ("Links (Legacy)", KeyLinks), ("Object comparison", KeyCompare), ("Object events", KeyEvents), ("Cinematic camera", KeyCinematic),
-                ("Record a replay", KeyReplayRecord), ("Watch the latest replay", KeyReplayPlay) });
-            KeyBindings.Register(keyRows.ToArray());
+                ("Record a replay", KeyReplayRecord), ("Watch the latest replay", KeyReplayPlay));
+            // the game's Dev Mode keys on a page of their own: F1 (its developer menu) and the rest (DevModeKeys, unbound by default)
+            var devRows = new System.Collections.Generic.List<(string, BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut>)> { ("Open the developer menu", KeyDevMenu) };
+            devRows.AddRange(DevModeKeys.Bind(Config));
+            KeyBindings.AddSection("Dev Mode keys", "The game's own developer keys, with Dev Mode on in the game's settings (Misc). F1 opens its developer menu; " +
+                "the rest start unbound, so Dev Mode doesn't turn Caps Lock, X, U, 0, Home or the F keys into cheats until you choose keys. " +
+                "The developer menu's key list shows the keys set here.", devRows.ToArray());
 
             // Worker fixes (terrain, roads) queue short jobs on the .NET thread pool and sometimes wait for them. Mono's pool
             // starts small and only adds threads slowly when busy, so batches could run on just a few threads.

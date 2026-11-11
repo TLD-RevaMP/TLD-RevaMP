@@ -29,29 +29,29 @@ namespace TLDRevamp
 
         internal static readonly Key[] Keys =
         {
-            new Key { Name = "Dev Mode: fly on/off", Cfg = "DevFly", Game = new[] { KeyCode.CapsLock },
+            new Key { Name = "Fly on/off", Cfg = "DevFly", Game = new[] { KeyCode.CapsLock },
                 Help = "The game's fly (noclip): tap the key. Was Caps Lock." },
-            new Key { Name = "Dev Mode: delete spawned item", Cfg = "DevDelete", Game = new[] { KeyCode.X },
+            new Key { Name = "Delete spawned item", Cfg = "DevDelete", Game = new[] { KeyCode.X },
                 Help = "Deletes the spawned item you look at (hold it to keep deleting). Was X." },
-            new Key { Name = "Dev Mode: bury spawned item", Cfg = "DevBury", Game = new[] { KeyCode.U },
+            new Key { Name = "Bury spawned item", Cfg = "DevBury", Game = new[] { KeyCode.U },
                 Help = "Buries the spawned item you look at. Was U." },
-            new Key { Name = "Dev Mode: spawn the last item again", Cfg = "DevLastSpawn", Game = new[] { KeyCode.Alpha0, KeyCode.BackQuote },
+            new Key { Name = "Spawn the last item again", Cfg = "DevLastSpawn", Game = new[] { KeyCode.Alpha0, KeyCode.BackQuote },
                 Help = "Spawns the developer menu's last item again (on foot). Was 0 or `." },
-            new Key { Name = "Dev Mode: save the game", Cfg = "DevSave", Game = new[] { KeyCode.Home },
+            new Key { Name = "Save the game", Cfg = "DevSave", Game = new[] { KeyCode.Home },
                 Help = "Saves the game at once. Was Home (also RevaMP's Item health key)." },
-            new Key { Name = "Dev Mode: revive / respawn", Cfg = "DevRevive", Game = new[] { KeyCode.F9 },
+            new Key { Name = "Revive / respawn", Cfg = "DevRevive", Game = new[] { KeyCode.F9 },
                 Help = "Brings you back after dying (respawns you in multiplayer). Was F9." },
-            new Key { Name = "Dev Mode: time backward (hold)", Cfg = "DevTimeBack", Game = new[] { KeyCode.F2 },
+            new Key { Name = "Time backward (hold)", Cfg = "DevTimeBack", Game = new[] { KeyCode.F2 },
                 Help = "Turns the time of day back while held. Was F2." },
-            new Key { Name = "Dev Mode: time forward (hold)", Cfg = "DevTimeForward", Game = new[] { KeyCode.F3 },
+            new Key { Name = "Time forward (hold)", Cfg = "DevTimeForward", Game = new[] { KeyCode.F3 },
                 Help = "Turns the time of day forward while held. Was F3." },
-            new Key { Name = "Dev Mode: next radio station", Cfg = "DevRadio", Game = new[] { KeyCode.F10 },
+            new Key { Name = "Next radio station", Cfg = "DevRadio", Game = new[] { KeyCode.F10 },
                 Help = "Moves every radio to its next song. Was F10." },
-            new Key { Name = "Dev Mode: spawn a test ragdoll", Cfg = "DevRagdoll", Game = new[] { KeyCode.F8 },
+            new Key { Name = "Spawn a test ragdoll", Cfg = "DevRagdoll", Game = new[] { KeyCode.F8 },
                 Help = "Spawns a test ragdoll in front of you. Was F8." },
-            new Key { Name = "Dev Mode: depth screenshot", Cfg = "DevDepthShot", Game = new[] { KeyCode.End },
+            new Key { Name = "Depth screenshot", Cfg = "DevDepthShot", Game = new[] { KeyCode.End },
                 Help = "Takes the game's depth screenshot. Was End." },
-            new Key { Name = "Dev Mode: debug item spawner", Cfg = "DevDebugSpawn", Game = new[] { KeyCode.F4 },
+            new Key { Name = "Debug item spawner", Cfg = "DevDebugSpawn", Game = new[] { KeyCode.F4 },
                 Help = "Fires the game's debug item spawners, where a world has them. Was F4." },
         };
 
@@ -163,6 +163,95 @@ namespace TLDRevamp
         internal static class DebugSpawn
         {
             private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code) => Swap(code, "newRandomStuffSpawnScript.Update", KeyCode.F4);
+        }
+
+        // ---------------------------------------------------------------- the developer menu's key list
+        /// The developer menu lists its keys in a text of its own ("[Caps]: Fly Toggle", "[0]: Spawn", …), written into the
+        /// game. While the menu is open each "[key]" in it shows the key set in Settings > Revamp > Dev Mode keys (or
+        /// "unbound"); a line naming a key RevaMP doesn't manage (the fly movement) stays as the game wrote it.
+        internal static string ListOriginal, ListShown;
+        private static TMPro.TMP_Text _list;
+        private static float _listAt;
+
+        /// The game's own labels for its keys (what it writes in the brackets), to the key that is now set.
+        internal static ConfigEntry<KeyboardShortcut> ForLabel(string label)
+        {
+            switch (label.Trim().ToLowerInvariant())
+            {
+                case "f1": return Plugin.KeyDevMenu;
+                case "caps": case "capslock": case "caps lock": return Keys[0].Entry;
+                case "x": return Keys[1].Entry;
+                case "u": return Keys[2].Entry;
+                case "0": case "`": case "alpha0": case "backquote": return Keys[3].Entry;
+                case "home": return Keys[4].Entry;
+                case "f9": return Keys[5].Entry;
+                case "f2": return Keys[6].Entry;
+                case "f3": return Keys[7].Entry;
+                case "f10": return Keys[8].Entry;
+                case "f8": return Keys[9].Entry;
+                case "end": return Keys[10].Entry;
+                case "f4": return Keys[11].Entry;
+                default: return null;
+            }
+        }
+
+        /// The game's list with each "[key]" replaced by the key set now: `name` gives a label's key name, or null for a
+        /// label it doesn't know (left as the game wrote it). Pure, for tests.
+        internal static string Rewrite(string original, System.Func<string, string> name)
+        {
+            return System.Text.RegularExpressions.Regex.Replace(original, @"\[([^\]\r\n]{1,24})\]", m =>
+            {
+                // "[0/`]", "[F2/F3]": every part known; parts naming one key collapse to it
+                var parts = m.Groups[1].Value.Split('/', ',');
+                var names = new List<string>();
+                foreach (var p in parts)
+                {
+                    string n = name(p);
+                    if (n == null) return m.Value;   // a key nobody manages: as the game wrote it
+                    if (!names.Contains(n)) names.Add(n);
+                }
+                return "[" + string.Join("/", names.ToArray()) + "]";
+            });
+        }
+
+        /// A list label's key now: a RevaMP-managed key's binding, or (T, "target") the game's own Controls binding.
+        private static string Name(string label)
+        {
+            var e = ForLabel(label);
+            if (e != null) return e.Value.MainKey == KeyCode.None ? "unbound" : Plugin.KeyName(e);
+            if (label.Trim().ToLowerInvariant() == "t") return GameKey(inputscript.IN.target);
+            return null;
+        }
+        private static string GameKey(inputscript.IN input)
+        {
+            try
+            {
+                var keys = settingsscript.s.S.inputs[(int)input].keys;
+                foreach (var k in keys) if (k != null && !k.axis && k.key != KeyCode.None) return k.key.ToString();
+                return "unbound";
+            }
+            catch (System.Exception) { return null; }
+        }
+
+        [HarmonyPatch(typeof(kaposztaleves), nameof(kaposztaleves.Upd))]
+        internal static class KeyList
+        {
+            private static void Postfix(kaposztaleves __instance)
+            {
+                try
+                {
+                    if (!__instance.isOpen || __instance.controlWindow == null) { _listAt = 0f; return; }
+                    if (UnityEngine.Time.unscaledTime < _listAt) return;
+                    _listAt = UnityEngine.Time.unscaledTime + 0.5f;   // a key changed in Settings shows within half a second
+                    if (_list == null) _list = __instance.controlWindow.GetComponentInChildren<TMPro.TMP_Text>(true);
+                    if (_list == null) return;
+                    if (ListOriginal == null) ListOriginal = _list.text;
+                    string shown = Rewrite(ListOriginal, Name);
+                    if (shown != _list.text) _list.text = shown;
+                    ListShown = shown;
+                }
+                catch (System.Exception e) { _listAt = float.MaxValue; Plugin.Log.LogWarning("DevModeKeys: the developer menu's key list: " + e.Message); }
+            }
         }
 
         /// `mp keys`: how many game checks each key replaced.

@@ -33,9 +33,10 @@ namespace TLDRevamp
             {
                 var settings = Find(menu.transform, "ButtonSettings");
                 if (settings == null || settings.parent == null) { Last = "the main menu has no Settings button: left as it is"; return; }
-                if (settings.parent.Find(ModsName) != null) { Last = "built"; return; }
+                Tighten(menu.transform, settings);
                 // against Settings' right edge, its height: as the gear against START
                 var at = settings.anchoredPosition + new Vector2(settings.sizeDelta.x * (1f - settings.pivot.x), 0f);
+                if (settings.parent.Find(ModsName) is RectTransform built) { built.anchoredPosition = at; Last = "built"; return; }
                 Clone(settings, ModsName, "Mods", at, Width, () => Net.ModsScreen.Open(null));
                 Last = "built: Mods next to Settings";
                 Plugin.Log.LogInfo("MainMenuButtons: " + Last);
@@ -64,6 +65,36 @@ namespace TLDRevamp
             var b = go.GetComponent<Button>();
             b.onClick = new Button.ButtonClickedEvent();   // the Settings button's own listener goes with the clone
             b.onClick.AddListener(() => { try { click(); } catch (System.Exception e) { Plugin.Log.LogWarning("MainMenuButtons: " + e.Message); } });
+        }
+
+        /// The menu's column one even step apart (asked for 2026-11-11: "spaced out too far"; the game had 130 to 150
+        /// between buttons 90 high). The column keeps its middle, so it stays where it was on the screen, and running
+        /// it again changes nothing. The buttons sit under two parents, so this works in world space; the column is the
+        /// buttons with Settings' left edge (the save screen has a Load button of its own elsewhere).
+        public static float Step = 115f;
+        public static readonly string[] Column = { "ButtonContinue", "ButtonMultiplayer", "ButtonStart", "ButtonLoad", "ButtonSettings", "ButtonExit" };
+        internal static void Tighten(Transform root, RectTransform settings)
+        {
+            if (Step <= 0f) return;
+            var found = new System.Collections.Generic.List<RectTransform>();
+            float x = settings.position.x, scale = settings.lossyScale.y;
+            foreach (var name in Column)
+                foreach (var t in root.GetComponentsInChildren<RectTransform>(true))
+                    if (t.name == name && Mathf.Abs(t.position.x - x) < 2f * Mathf.Max(scale, 0.0001f)) { found.Add(t); break; }
+            if (found.Count < 3) return;
+            float top = float.MinValue, bottom = float.MaxValue;
+            foreach (var t in found) { top = Mathf.Max(top, Bottom(t) + t.rect.height * scale); bottom = Mathf.Min(bottom, Bottom(t)); }
+            float h = settings.rect.height * scale, step = Step * scale;
+            float span = (found.Count - 1) * step + h, first = (top + bottom) * 0.5f + span * 0.5f - h;   // the top button's bottom edge
+            for (int i = 0; i < found.Count; i++)
+            {
+                var t = found[i];
+                t.position += new Vector3(0f, first - i * step - Bottom(t), 0f);
+            }
+        }
+        private static float Bottom(RectTransform t)
+        {
+            var c = new Vector3[4]; t.GetWorldCorners(c); return c[0].y;
         }
 
         private static RectTransform Find(Transform root, string name)

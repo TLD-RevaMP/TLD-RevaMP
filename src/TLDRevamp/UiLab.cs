@@ -7,7 +7,7 @@ namespace TLDRevamp
     /// UI hierarchy dump (bridge `uidump <path or "settings"> [depth]`): names, active state, components, rects, texts.
     public static class UiLab
     {
-        public static string Dump(string what, int depth)
+        public static string Dump(string what, int depth, bool full = false)
         {
             Transform root = null;
             if (what == "settings")
@@ -22,11 +22,11 @@ namespace TLDRevamp
             }
             if (root == null) return "{\"error\":\"not found\"}";
             var sb = new StringBuilder();
-            Walk(root, 0, depth, sb);
+            Walk(root, 0, depth, sb, full);
             return "{\"path\":" + Json.Str(PathOf(root)) + ",\"tree\":" + Json.Str(sb.ToString()) + "}";
         }
 
-        private static void Walk(Transform t, int level, int max, StringBuilder sb)
+        private static void Walk(Transform t, int level, int max, StringBuilder sb, bool full = false)
         {
             sb.Append(new string(' ', level * 2)).Append(t.gameObject.activeSelf ? "" : "(off) ").Append(t.name);
             var comps = t.GetComponents<Component>().Where(c => c != null && !(c is Transform)).Select(c => c.GetType().Name);
@@ -39,10 +39,10 @@ namespace TLDRevamp
             var tt = t.GetComponent<TMPro.TMP_Text>();
             if (tt != null) sb.Append(" font=").Append(tt.font != null ? tt.font.name : "?").Append(" fs=").Append(tt.fontSize).Append(" auto=").Append(tt.enableAutoSizing).Append(" col=").Append(ColorUtility.ToHtmlStringRGBA(tt.color)).Append(" al=").Append(tt.alignment);
             var tmp = t.GetComponent<TMPro.TMP_Text>();
-            if (tmp != null) sb.Append(" text=\"").Append(tmp.text.Length > 40 ? tmp.text.Substring(0, 40) : tmp.text).Append('"');
+            if (tmp != null) sb.Append(" text=\"").Append(!full && tmp.text.Length > 40 ? tmp.text.Substring(0, 40) : tmp.text).Append('"');
             sb.Append('\n');
             if (level >= max) { if (t.childCount > 0) sb.Append(new string(' ', level * 2 + 2)).Append("… ").Append(t.childCount).Append(" children\n"); return; }
-            for (int i = 0; i < t.childCount; i++) Walk(t.GetChild(i), level + 1, max, sb);
+            for (int i = 0; i < t.childCount; i++) Walk(t.GetChild(i), level + 1, max, sb, full);
         }
 
         /// Persistent listeners of every UnityEvent-bearing component on the object at `what` (Button.onClick, Toggle...).

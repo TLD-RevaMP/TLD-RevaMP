@@ -279,7 +279,7 @@ Describe the bug and when it happened; the developers will ask for the files pri
 Keys: **F11** multiplayer menu, **Page Up** overlay, **Page Down** report, **Insert** item traffic, **Scroll Lock**
 marks, **Ctrl+Insert** bug report (either Ctrl; or `/bug note` in chat; see docs/BUG-REPORTS.md). Change them in Settings → Revamp → Keys or in
 `BepInEx/config/tldrevamp.core.cfg`, section `[Keys]`. The ownership, ghost, link, comparison and event-feed shortcuts
-are unbound by default. The game's Dev Mode keys are there too (`src/TLDRevamp/DevModeKeys.cs`): F1 opens its developer
+are unbound by default. The game's Dev Mode keys have a page of their own, Settings → Revamp → Dev Mode keys (`src/TLDRevamp/DevModeKeys.cs`), and the developer menu's key list shows the keys set there: F1 opens its developer
 menu as before, and its other hotkeys (fly, delete and bury spawned items, spawn the last item again, save, revive, time
 of day, radio, test ragdoll, depth screenshot, debug spawner; the game had Caps Lock, X, U, 0/`, Home, F2–F4, F8–F10 and
 End) are unbound until you choose a key.

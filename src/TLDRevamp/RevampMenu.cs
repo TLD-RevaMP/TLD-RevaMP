@@ -88,6 +88,7 @@ namespace TLDRevamp
             button.name = "ButtonRevamp";
             StripGameHooks(button);
             ((RectTransform)button.transform).anchoredPosition = new Vector2(-870f, 150f);
+            EvenTabs(root, (RectTransform)button.transform);
             button.GetComponentInChildren<TextMeshProUGUI>().text = "Revamp";
             var b = button.GetComponent<Button>();
             b.onClick = new Button.ButtonClickedEvent();
@@ -282,6 +283,20 @@ namespace TLDRevamp
         {
             foreach (var r in ui.Refreshers) { try { r(); } catch { } }
             Layout(ui);
+        }
+
+        /// The tab buttons one step apart (asked for 2026-11-11): the game leaves a wider gap above Player than between the
+        /// others, and Revamp goes under Player. The step is the game's own (Graphics to Controls); Back stays where it is.
+        internal static void EvenTabs(Transform root, RectTransform revamp)
+        {
+            var order = new List<RectTransform>();
+            foreach (var n in new[] { "ButtonGraphics", "ButtonControls", "ButtonSteeringWheel", "ButtonMisc", "ButtonPlayer" })
+            { var t = root.Find(n) as RectTransform; if (t != null) order.Add(t); }
+            if (order.Count < 2) return;
+            order.Add(revamp);
+            float top = order[0].anchoredPosition.y, step = order[0].anchoredPosition.y - order[1].anchoredPosition.y;
+            if (step <= 0f) return;
+            for (int i = 1; i < order.Count; i++) order[i].anchoredPosition = new Vector2(order[i].anchoredPosition.x, top - i * step);
         }
 
         private static void ShowPage(Ui ui, string page)

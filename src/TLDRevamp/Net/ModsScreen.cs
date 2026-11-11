@@ -17,7 +17,10 @@ namespace TLDRevamp.Net
         private static menuhandler _builtFor;
         private static TextMeshProUGUI _title, _count, _name, _version, _message, _question;
         private static readonly List<TextMeshProUGUI> Lines = new List<TextMeshProUGUI>();
-        private sealed class Tile { internal GameObject Go; internal TextMeshProUGUI Name; }
+        /// A tape: the mod's name in its strip (bold, as large as it fits), the picture, and over the picture's bottom a dark
+        /// band with the version and the state (on, off, not installed, update) in the state's colour. Asked for
+        /// 2026-11-11: the name was small and nothing said the version or whether a mod was installed or on.
+        private sealed class Tile { internal GameObject Go; internal TextMeshProUGUI Name, Info; internal Image Body; }
         private static readonly List<Tile> Tiles = new List<Tile>();
         private static Button _install, _remove, _source, _refresh, _up, _down, _toggle;
         private static List<ModCatalog.Mod> _items = new List<ModCatalog.Mod>();
@@ -212,6 +215,20 @@ namespace TLDRevamp.Net
                 int i = Tiles.Count;
                 var tile = new Tile { Go = tp.gameObject, Name = Text(tp, "ButtonNameTextBackground/ButtonNameText") };
                 var image = tp.Find("Mask2/ButtonImage").GetComponent<Image>(); image.sprite = save != null ? save.spriteNoImage : null;
+                tile.Name.enableAutoSizing = true; tile.Name.fontSizeMin = 14; tile.Name.fontSizeMax = tile.Name.fontSize * 1.6f;
+                tile.Name.fontStyle = FontStyles.Bold; tile.Name.overflowMode = TextOverflowModes.Ellipsis;
+                // a dark band over the bottom of the picture (the visible window, Mask2: the picture is bigger): version and state
+                var band = new GameObject("RevampModBand", typeof(RectTransform)); band.transform.SetParent(tp.Find("Mask2"), false);
+                var brt = (RectTransform)band.transform; brt.anchorMin = Vector2.zero; brt.anchorMax = new Vector2(1f, 0.4f);
+                brt.offsetMin = Vector2.zero; brt.offsetMax = Vector2.zero;
+                tile.Body = band.AddComponent<Image>(); tile.Body.raycastTarget = false; tile.Body.color = new Color(0.06f, 0.05f, 0.04f, 0.9f);
+                var go = new GameObject("RevampModInfo", typeof(RectTransform)); go.transform.SetParent(band.transform, false);
+                var irt = (RectTransform)go.transform; irt.anchorMin = Vector2.zero; irt.anchorMax = Vector2.one;
+                irt.offsetMin = new Vector2(10f, 4f); irt.offsetMax = new Vector2(-10f, -4f);
+                tile.Info = go.AddComponent<TextMeshProUGUI>(); tile.Info.font = tile.Name.font; tile.Info.raycastTarget = false;
+                tile.Info.alignment = TextAlignmentOptions.Center; tile.Info.enableWordWrapping = false; tile.Info.richText = true;
+                tile.Info.enableAutoSizing = true; tile.Info.fontSizeMin = 14; tile.Info.fontSizeMax = 44; tile.Info.color = Color.white;
+                tile.Info.overflowMode = TextOverflowModes.Ellipsis;
                 tp.GetComponent<Button>().onClick.AddListener(() => { _selected = _page * Tiles.Count + i; _confirm.SetActive(false); Refresh(); });
                 Tiles.Add(tile);
             }
@@ -261,9 +278,12 @@ namespace TLDRevamp.Net
             {
                 int index = _page * Tiles.Count + i; var tile = Tiles[i]; tile.Go.SetActive(index < count);
                 if (index >= count) continue;
-                var item = mods[index]; bool approved = ModCatalog.Reason(item, ModCatalog.Offered(item)) == null;
+                var item = mods[index];
+                TileState(item, out string state, out string version, out Color colour);
+                bool selected = index == _selected;
                 tile.Name.text = Esc(item.Name ?? item.Id);
-                tile.Name.color = !approved ? Color.gray : index == _selected ? new Color32(0xC8, 0xFF, 0xC8, 0xFF) : Color.white;
+                tile.Name.color = selected ? new Color32(0xC8, 0xFF, 0xC8, 0xFF) : Color.white;
+                tile.Info.text = Esc(version) + "\n<b><color=#" + ColorUtility.ToHtmlStringRGB(colour) + ">" + Esc(state) + "</color></b>";
             }
             _up.gameObject.SetActive(_page > 0); _down.gameObject.SetActive(_page < pages - 1);
             var m = Selected();
@@ -300,6 +320,34 @@ namespace TLDRevamp.Net
             }
             _message.text = ModCatalog.Progress + "\nEnable, disable and remove take effect at next start. Updates keep disabled mods disabled.";
             _message.gameObject.SetActive(_message.text.Length > 0);
+        }
+
+        // the state's text colour on the tape's dark band
+        static readonly Color On = new Color32(0x7C, 0xFF, 0x7C, 0xFF), Off = new Color32(0xFF, 0xB3, 0x47, 0xFF),
+            Update = new Color32(0xFF, 0xE1, 0x4D, 0xFF), Absent = new Color32(0xE6, 0xE6, 0xE6, 0xFF), Unapproved = new Color32(0x9A, 0x9A, 0x9A, 0xFF),
+            Removing = new Color32(0xFF, 0x70, 0x70, 0xFF);
+
+        /// One tape's state line, version line and colour.
+        private static void TileState(ModCatalog.Mod m, out string state, out string version, out Color colour)
+        {
+            var offered = ModCatalog.Offered(m);
+            string available = offered?.Version;
+            bool approved = offered != null && ModCatalog.Reason(m, offered) == null;
+            string installed = null; bool manual = false; string status = "";
+            try { installed = Installed(m, out manual); status = ModBrowser.State(m.Id) ?? ""; } catch (Exception) { }
+            bool update = installed != null && available != null && Newer(available, installed);
+            bool pending = status.EndsWith("at next start") || status.Contains("takes effect at next start");
+            version = installed == null ? (available != null ? "v" + available : "") : update ? "v" + installed + ", new v" + available : "v" + installed;
+            if (ModActivation.Core(m.Id)) { state = "Built in"; colour = On; return; }
+            if (manual) { state = "On · installed by hand"; colour = On; return; }
+            if (status.StartsWith("Removed")) { state = pending ? "Removed at next start" : "Removed"; colour = Removing; return; }
+            if (installed == null)
+            {
+                state = approved ? "Not installed" : "Not available"; colour = approved ? Absent : Unapproved; return;
+            }
+            bool off = status.StartsWith("Disabled");
+            state = (off ? "Off" : "On") + (pending ? " at next start" : "") + (update ? " · update" : "");
+            colour = update ? Update : off ? Off : On;
         }
 
         private static void Install()
