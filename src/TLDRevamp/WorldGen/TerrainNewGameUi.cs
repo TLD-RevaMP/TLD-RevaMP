@@ -24,13 +24,16 @@ namespace TLDRevamp.WorldGen
     /// in a broken state by a layout we did not recognise.
     ///
     /// The old terrain (2023) runs the 2023 build's own code from the player's Steam download (Old2023.OldBuild).
-    /// Without those files its entry is greyed out and can't be picked, and one line under the row says how to get them.
+    /// Without those files its entry is greyed out; picking it keeps the old pick and shows one line under the row:
+    /// the TerrainChoice mod (in the mod browser) has the 2023 terrain without any download (asked for 2026-11-11: the
+    /// line used to show at once, with Steam console instructions).
     [HarmonyPatch]
     public static class TerrainNewGameUi
     {
         public const string DropdownName = "DropdownTerrain";
         public const string LabelName = "TextTerrainLabel";
         public const string HintName = "TextTerrainOld2023Hint";
+        public const string NeedsModHint = "2023 terrain needs the TerrainChoice mod: get it from Mods on the main menu.";
 
         /// The dropdown we added, so its value can be refreshed when the mode changes elsewhere.
         private static TMP_Dropdown _dropdown;
@@ -89,7 +92,8 @@ namespace TLDRevamp.WorldGen
                 {
                     var modes = TerrainModes.Selectable();
                     if (v < 0 || v >= modes.Length) return;
-                    if (!Offered(modes[v])) { Refresh(); return; }   // greyed out: the old pick stays
+                    if (!Offered(modes[v])) { Refresh(); ShowHint(true); return; }   // greyed out: the old pick stays, the line says why
+                    ShowHint(false);
                     TerrainHooks.Select(modes[v]);
                     RevampSettings.SetInt(RevampSettings.NewGameTerrainKey, (int)modes[v]);
                     RevampSettings.Save();
@@ -129,7 +133,8 @@ namespace TLDRevamp.WorldGen
         /// Can this mode be picked on this machine? The old terrain needs the 2023 game files.
         public static bool Offered(TerrainMode m) => m != TerrainMode.OldTerrain || Old2023.OldBuild.Available;
 
-        /// One line under the terrain row while the old terrain can't be picked: how to get the 2023 game files.
+        /// One line under the terrain row, shown once the player picks the old terrain without the 2023 game files:
+        /// the TerrainChoice mod has it.
         /// It spans the row, from its "Terrain:" label to the dropdown's right edge, so the game's panel never clips it.
         private static void BuildHint(RectTransform dropdown)
         {
@@ -151,14 +156,19 @@ namespace TLDRevamp.WorldGen
             rt.sizeDelta = new Vector2(Mathf.Max(100f, right - topLeft.x), 90f);
             _hint = go.GetComponent<TextMeshProUGUI>();
             if (_hint == null) return;
-            _hint.text = Old2023.OldBuildFiles.NewGameHint;
+            _hint.text = NeedsModHint;
             _hint.enableAutoSizing = false;
             _hint.fontSize = _label.fontSize * 0.5f;
             _hint.enableWordWrapping = true;
             _hint.overflowMode = TextOverflowModes.Overflow;
             _hint.alignment = TextAlignmentOptions.TopLeft;
             _hint.raycastTarget = false;
-            go.SetActive(true);
+            go.SetActive(false);   // until the player picks the old terrain
+        }
+
+        private static void ShowHint(bool on)
+        {
+            if (_hint != null && _hint.gameObject.activeSelf != on) _hint.gameObject.SetActive(on);
         }
 
         /// The dropdown's list is made each time it opens: grey out the entries that can't be picked.
@@ -177,7 +187,7 @@ namespace TLDRevamp.WorldGen
                 {
                     if (index < modes.Length && !Offered(modes[index]))
                     {
-                        toggle.interactable = false;
+                        // greyed, but it can be clicked: the pick is refused and the line under the row says why
                         foreach (var text in toggle.GetComponentsInChildren<TMP_Text>(true))
                             text.color = new Color(text.color.r, text.color.g, text.color.b, 0.4f);
                     }
