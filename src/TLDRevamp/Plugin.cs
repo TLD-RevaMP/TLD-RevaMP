@@ -304,6 +304,7 @@ namespace TLDRevamp
                 }
                 catch (Exception e) { Log.LogWarning("Script timers failed: " + e.Message); }
 
+            SceneCounts.Growth = Diagnostics.SceneGrowth.Json;
             Application.quitting += () =>
             {
                 Log.LogInfo("Game quitting: stopping bridge and background work");

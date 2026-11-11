@@ -109,7 +109,7 @@ static class TeleportPlacementTest
         Time.realtimeSinceStartup = 31; Tpa.Tick();
         Check(Tpa.Holding(rb) && rb.isKinematic && Tpa.CarsGaveUp == 1, "no floor at deadline remains physically held with failure event");
         TLDRevamp.Fixes.UnfreezeOnGround.Enabled = false;
-        bool unfreeze = (bool)typeof(TLDRevamp.Fixes.UnfreezeOnGround).GetMethod("Prefix", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { car });
+        bool unfreeze = (bool)typeof(TLDRevamp.Fixes.UnfreezeOnGround).GetMethod("Prefix", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { car, true });
         Check(!unfreeze, "game streamer cannot drop a held owned car even when general ground fix is disabled");
         Time.realtimeSinceStartup = 37; Tpa.Tick();
         Check(!Tpa.RefreshingObjects && TLDRevamp.SessionLog.Arrivals == 1, "held failure completes arrival telemetry instead of staying pending forever");
@@ -136,18 +136,18 @@ static class TeleportPlacementTest
         TLDRevamp.Fixes.TrailerGrip.All.Add(new attachgripscript { Grip = new object(), tosaveitem = trailer });
         var ground = new Collider();
         Physics.Hits = p => p.z > -3 ? new[] { new RaycastHit { collider = ground, point = new Vector3(0, 0, 0), distance = .5f } } : Array.Empty<RaycastHit>();
-        Check(!(bool)prefix.Invoke(null, new object[] { pickup }) && pickup.RB.isKinematic, "a car waits for the trailer hitched to it");
-        Check(!(bool)prefix.Invoke(null, new object[] { trailer }) && trailer.RB.isKinematic, "the trailer waits for its own ground");
+        Check(!(bool)prefix.Invoke(null, new object[] { pickup, true }) && pickup.RB.isKinematic, "a car waits for the trailer hitched to it");
+        Check(!(bool)prefix.Invoke(null, new object[] { trailer, true }) && trailer.RB.isKinematic, "the trailer waits for its own ground");
         Physics.Hits = p => new[] { new RaycastHit { collider = ground, point = new Vector3(0, 0, 0), distance = .5f } };
-        Check((bool)prefix.Invoke(null, new object[] { pickup }) && !trailer.RB.isKinematic, "the car's unfreeze lets its trailer go in the same call");
+        Check((bool)prefix.Invoke(null, new object[] { pickup, true }) && !trailer.RB.isKinematic, "the car's unfreeze lets its trailer go in the same call");
         TLDRevamp.Fixes.UnfreezeOnGround.HitchPairs = false;
         trailer.RB.isKinematic = true; pickup.RB.isKinematic = true;
         Physics.Hits = p => p.z > -3 ? new[] { new RaycastHit { collider = ground, point = new Vector3(0, 0, 0), distance = .5f } } : Array.Empty<RaycastHit>();
-        Check((bool)prefix.Invoke(null, new object[] { pickup }) && trailer.RB.isKinematic, "A/B: HitchPairs off lets the car go alone (before)");
+        Check((bool)prefix.Invoke(null, new object[] { pickup, true }) && trailer.RB.isKinematic, "A/B: HitchPairs off lets the car go alone (before)");
         TLDRevamp.Fixes.UnfreezeOnGround.HitchPairs = true;
         TLDRevamp.Fixes.LoadFreeze.Holding = true; pickup.RB.isKinematic = true;
         Physics.Hits = p => new[] { new RaycastHit { collider = ground, point = new Vector3(0, 0, 0), distance = .5f } };
-        Check(!(bool)prefix.Invoke(null, new object[] { pickup }), "nothing is let go while a world is loading");
+        Check(!(bool)prefix.Invoke(null, new object[] { pickup, true }), "nothing is let go while a world is loading");
         TLDRevamp.Fixes.LoadFreeze.Holding = false;
         Console.WriteLine($"Teleport placement: {checks} checks passed");
     }

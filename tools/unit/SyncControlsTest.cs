@@ -94,6 +94,7 @@ namespace TLDRevamp.Net
         static void ToServer(NetWriter w, bool reliable) => Sent++;
         static void ServerSendTo(int id, NetWriter w, bool reliable) { Target = id; Sent++; }
         static Ent OwnEntity(tosaveitemscript it) { foreach (var e in ByNet.Values) if (e.Root == it) return e; return null; }
+        private static List<Ent> LookupSet() => new List<Ent>(ByNet.Values);   // Entities.Placed: every object here is placed
         static NetReader Reader() => new NetReader { Buf = W.Buf, Pos = 1, End = W.Len };
         internal static void RunDetach(attachablescript at)
         {

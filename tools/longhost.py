@@ -55,6 +55,16 @@ def measure(b, label):
     return row
 
 
+def hop(b, rp, f, metres):
+    """along the road from road point rp, heading f: the road's point there (a hop off a bend is tried shorter)"""
+    for m in (metres, metres / 2, metres / 4, metres / 8):
+        tp(b, rp["gx"] + f[0] * m, rp["gz"] + f[1] * m, timeout=60); time.sleep(5)
+        try: return b("roadpoint")
+        except RuntimeError: pass
+    tp(b, rp["gx"], rp["gz"], timeout=60); time.sleep(3)
+    return b("roadpoint")
+
+
 rows = []
 with game.ProtectedSession():
     try:
@@ -63,8 +73,8 @@ with game.ProtectedSession():
         b("bg on"); b("set UnityEngine.QualitySettings.vSyncCount 0")
         if not SOLO: print("  hosting alone:", str(b("mp host 27070"))[:80], flush=True)
         rp = b("roadpoint")
-        tp(b, rp["gx"] + math.sin(math.radians(rp["yaw"])) * 3000, rp["gz"] + math.cos(math.radians(rp["yaw"])) * 3000, timeout=60)
-        a = b("roadpoint"); tp(b, a["gx"], a["gz"], timeout=60); look(b, a["yaw"])
+        a = hop(b, rp, (math.sin(math.radians(rp["yaw"])), math.cos(math.radians(rp["yaw"]))), 3000)
+        tp(b, a["gx"], a["gz"], timeout=60); look(b, a["yaw"])
         rows.append(measure(b, "A start"))
         last, heading, t0 = a, (0.0, 0.0), time.time()
         stops = int(KM / STEP)
@@ -74,10 +84,7 @@ with game.ProtectedSession():
             f = (math.sin(math.radians(rp["yaw"])), math.cos(math.radians(rp["yaw"])))
             if i > 0 and f[0] * heading[0] + f[1] * heading[1] < 0: f = (-f[0], -f[1])
             heading = f
-            for hop in (STEP * 1000, STEP * 500, STEP * 250):
-                tp(b, rp["gx"] + f[0] * hop, rp["gz"] + f[1] * hop, timeout=60); time.sleep(5)
-                try: b("roadpoint"); break
-                except RuntimeError: pass
+            hop(b, rp, f, STEP * 1000)
             if (i + 1) % 25 == 0: print(f"  {(i + 1) * STEP:.0f} km, {(time.time() - t0) / 60:.1f} min, shared {b('scenecount').get('shared')}", flush=True)
         far = b("roadpoint"); tp(b, far["gx"], far["gz"], timeout=60); look(b, far["yaw"])
         rows.append(measure(b, f"far ({KM:.0f} km)"))
