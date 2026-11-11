@@ -8,7 +8,9 @@ road is travelled in --step km hops for --km; measured there (far); then back at
 against A again is the same view of the same place: what differs is what the session gathered on the way.
 Desktop only; the player's saves are backed up and put back (ProtectedSession).
 
-  tools/longhost.py [--km 300] [--step 3] [--solo] [--secs 20] [--seed 20261111]"""
+The time of day is put back to the first measurement's for each one. --step 1 (km) lets the world around the road be
+made all the way (buildings, items): longer hops skip most of it.
+  tools/longhost.py [--km 300] [--step 1] [--solo] [--secs 20] [--seed 20261111]"""
 import sys, time, math, json, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
@@ -16,7 +18,8 @@ from bench import Bridge
 from roadkit import tp
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
-KM, STEP, SECS, SEED = arg("--km", 300.0, float), arg("--step", 3.0, float), arg("--secs", 20, int), arg("--seed", 20261111, int)
+KM, STEP, SECS, SEED = arg("--km", 300.0, float), arg("--step", 1.0, float), arg("--secs", 20, int), arg("--seed", 20261111, int)
+_clock = None
 SOLO = "--solo" in sys.argv
 TIMERS = ("TLDRevamp.Net.Mp.Tick TLDRevamp.Net.Entities.FixedTick TLDRevamp.Net.Entities.LateSample poiGenScript.Upd "
           "mapSettingScript.Update itemPlaceRemoveScript.RemoveStuff itemPlaceRemoveScript.PlaceStuff terrainGenScript.Update roadGenScript.Update")
@@ -29,9 +32,23 @@ def look(b, yaw):
         except RuntimeError: pass
 
 
+def pin_clock(b):
+    """the same time of day at every measurement: the first one's (light, shadows and fog change the frame by more than
+    anything gathered on the way — the first runs' 11-12 % drop came with ~35 min of game time)"""
+    global _clock
+    t = float(b("get napszakvaltakozas.s.t")["value"])
+    if _clock is None: _clock = t; return
+    tek = float(b("get napszakvaltakozas.s.tekeres")["value"])
+    b(f"set napszakvaltakozas.s.tekeres {tek + (_clock - t)}")
+
+
 def measure(b, label):
+    pin_clock(b)
     time.sleep(8)   # what the hop placed settles
-    b(f"timers on {TIMERS}"); b("loopprof start")
+    b(f"timers on {TIMERS}")
+    try: b("loopprof stop")   # the plugin may run it from the start: begin this window afresh
+    except RuntimeError: pass
+    b("loopprof start")
     wins, last, t0 = [], None, time.time()
     while time.time() - t0 < SECS + 5.5:
         r = b("timers show 12")
