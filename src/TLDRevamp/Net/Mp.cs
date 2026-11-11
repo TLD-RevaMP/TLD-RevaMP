@@ -401,12 +401,13 @@ namespace TLDRevamp.Net
             catch (Exception e)
             {
                 Plugin.Log.LogWarning("Scene-load session stop failed, forcing: " + e);
+                bool wasHost = Server != null;   // asked after Server = null it was always false: a host got the client's reset
                 try { Client?.Dispose(); } catch { }
                 try { Server?.Dispose(); } catch { }
                 Client = null; Server = null;
                 try { RemotePlayers.Clear(); } catch { }
-                try { Entities.Reset(Server != null); } catch { }
-                try { ModObjects.Reset(Server != null); } catch { }
+                try { Entities.Reset(wasHost); } catch { }
+                try { ModObjects.Reset(wasHost); } catch { }
             }
         }
 

@@ -186,7 +186,11 @@ namespace TLDRevamp.Net
             var pos = new Vector3d(r.F64(), r.F64(), r.F64()); var rot = new Quaternion(r.F32(), r.F32(), r.F32(), r.F32());
             if (!r.Bad && r.Remaining > 0) { ServerCarriedOff(from, carNet, epoch, (int)r.VarU32(), pos, rot, r); return; }
             Server.TryGetValue(carNet, out var car);
-            string why = r.Bad || r.Remaining != 0 ? "malformed" : car == null ? "missing car" : car.OwnerId != from ? "wrong owner" : !ClaimEpochOk(car, from, epoch) ? "epoch" : CheckPartOff(car, idx, pos, rot);
+            // the previous owner's too, within HandoverAcceptS, stamped with the epoch it owned in: in a crash takeover both
+            // machines simulate the crash for a moment and the parts its own physics threw off were refused ("wrong owner"),
+            // on screen off there and on everywhere else (as ServerCarriedOff already allows)
+            bool prev = car != null && car.OwnerId != from && car.PrevOwnerId == from && Time.realtimeSinceStartup - car.PrevOwnerAt <= HandoverAcceptS && epoch + 1 == car.Epoch;
+            string why = r.Bad || r.Remaining != 0 ? "malformed" : car == null ? "missing car" : car.OwnerId != from && !prev ? "wrong owner" : !prev && !ClaimEpochOk(car, from, epoch) ? "epoch" : CheckPartOff(car, idx, pos, rot);
             if (why != null) { RefusePartOff(from, carNet, idx, epoch, why); return; }
             SplitPart(car, idx, from, pos, rot, 0, -1);
         }

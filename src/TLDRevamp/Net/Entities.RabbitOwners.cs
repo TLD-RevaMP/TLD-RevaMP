@@ -29,7 +29,9 @@ namespace TLDRevamp.Net
             double near2 = RabbitNearM * (double)RabbitNearM;
             foreach (var se in Server.Values)
             {
-                if (!se.Rabbit || se.PartIndex >= 0 || se.CrashReturnTo >= 0 || se.Held || se.Stored || rt < se.RabbitHoldUntil) continue;
+                // locked in a container (a dead rabbit in a car's bed): it goes with the container's owner (contents claims),
+                // and this rule took it back every ~2 s — an owner change on every machine each time
+                if (!se.Rabbit || se.PartIndex >= 0 || se.CrashReturnTo >= 0 || se.Held || se.Stored || se.LockFrame != 0 || rt < se.RabbitHoldUntil) continue;
                 int best = -1; double bestD = double.MaxValue, curD = double.MaxValue;
                 foreach (var p in _rabAnchors)
                 {

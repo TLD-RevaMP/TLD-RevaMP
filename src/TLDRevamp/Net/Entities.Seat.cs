@@ -49,7 +49,7 @@ namespace TLDRevamp.Net
                 if (!InSession) return;
                 if (mainscript.s != null && mainscript.s.player == __instance)
                 { LocalSeat(out uint net, out int seat); if (net != 0) SessionLog.Event("seat-enter", net, slot: seat, from: MyId); }
-                foreach (var e in ByNet.Values)
+                foreach (var e in LookupSet())
                     if (e.Root != null && e.Proxy && _u.transform.root == e.Root.transform.root)
                     { SeatCollisionIgnore(__instance, _u); return; }
             }

@@ -192,6 +192,9 @@ namespace TLDRevamp.Net
             if (se.OwnerId == from) return;
             se.CrashReturnTo = se.OwnerId; se.CrashUntil = Time.realtimeSinceStartup + CrashLeaseS;
             OwnerLog(se, from, "crash claim");
+            // a claim like any other: the crash machine's part-offs stamped with the old epoch, sent before this reply
+            // reached it, still count (ClaimEpochOk) — a wheel thrown off in the first round trip was refused ("epoch")
+            se.ClaimedBy = from; se.ClaimedAt = Time.realtimeSinceStartup; se.ClaimedFromEpoch = se.Epoch;
             se.OwnerId = from; se.Epoch++;
             CrashGranted++;
             W.Reset(); W.U8(Owner); W.U32(net); W.VarU32((uint)from); W.U32(se.Epoch);

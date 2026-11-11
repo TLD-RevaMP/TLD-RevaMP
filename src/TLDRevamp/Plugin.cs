@@ -308,6 +308,15 @@ namespace TLDRevamp
             Application.quitting += () =>
             {
                 Log.LogInfo("Game quitting: stopping bridge and background work");
+                // the session ends now, not at Steam's timeout: the others saw "the host isn't responding" for 12-15 s, and a
+                // joiner's last player record (up to 30 s old) was what the host kept. No host save here: the game makes
+                // none on quit either (a scene-load stop)
+                try
+                {
+                    if (Net.Mp.Client != null) Net.PlayerSave.ClientLeaving();
+                    if (Net.Mp.Server != null || Net.Mp.Client != null) Net.Mp.Stop(fromSceneLoad: true);
+                }
+                catch (Exception e) { Log.LogWarning("session stop on quit: " + e.Message); }
                 Fixes.AsyncTerrain.Enabled = false; // no new worker jobs during shutdown
                 Bridge?.Stop();
                 SessionLog.Shutdown();

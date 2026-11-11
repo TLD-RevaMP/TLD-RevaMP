@@ -217,6 +217,18 @@ namespace TLDRevamp.Net
         /// Session over. The host keeps the shared world: display copies become its real cars where the others left
         /// them, and the hidden local duplicates (stale versions of cars that moved on) are removed. A client goes back
         /// to its own world: the network copies disappear and its hidden cars come back where they were.
+        /// What the session left on bodies and in lists keyed by its objects (the next session's net ids start at 1 again):
+        /// glued copies' joints left free (CopyJointTick runs in a session only: they stayed position-free until a reload),
+        /// bodies left at a gentle depenetration, crash holds and waits, parts thrown off a carrier.
+        private static void ResetSessionLeftovers()
+        {
+            foreach (var kv in _freedJoints) if (kv.Key != null) { try { SetJointFree(kv.Key, kv.Value, false); } catch { } }
+            _freedJoints.Clear();
+            foreach (var kv in _gentle) if (kv.Key != null) kv.Key.maxDepenetrationVelocity = kv.Value.was;
+            _gentle.Clear();
+            _held.Clear(); _after.Clear(); _testHeld.Clear(); _carriedOff.Clear();
+        }
+
         public static void Reset(bool wasHost = true)
         {
             // a session that ends is a reconnect's other half: the VR state of the old player must not survive it
@@ -247,7 +259,8 @@ namespace TLDRevamp.Net
                 foreach (var go in kv.Value) if (go != null) go.SetActive(true);
             DisabledBuiltIn.Clear();
             HitchReset(wasHost);
-            ByNet.Clear(); Server.Clear(); PendingShare.Clear(); _nextNet = 1; _serverLocked.Clear(); _placed.Clear(); _placedDirty = true; ResetAutoMarks();
+            ResetSessionLeftovers();
+            ByNet.Clear(); Server.Clear(); PendingShare.Clear(); _nextNet = 1; _serverLocked.Clear(); _placed.Clear(); _byItem.Clear(); _byOwn.Clear(); _placedDirty = true; ResetAutoMarks();
             // keyed by copies and network ids (which start at 1 again next session). (Known, the server's "sent to player N"
             // sets, needs nothing here: ServerOnJoin starts every joiner with an empty one - rehost.py)
             PhysicalCars.Clear(); _refetchedAt.Clear(); _refetchLater.Clear(); _lostParts.Clear(); BreaksReset();
@@ -1384,6 +1397,13 @@ namespace TLDRevamp.Net
         private static void SetProxy(Ent e, bool proxy, bool keepMotion = false)
         {
             if (e.Proxy == proxy) return;
+            // becoming a copy around a player sitting in it (another took the wheel, a crash lease): the kinematic copy
+            // pushes the capsule out — the eject GetIn's ignore prevents, applied only when the car was a copy already
+            if (proxy && e.Root != null && mainscript.s != null)
+            {
+                var pl = mainscript.s.player;
+                if (pl != null && pl.Bsitting && pl.seat != null && pl.seat.transform.root == e.Root.transform.root) SeatCollisionIgnore(pl, pl.seat);
+            }
             CopyTanksOnOwnerChange(e, proxy);
             if (!proxy && e.WornBy >= 0) ClearWorn(e);   // ours now: loose where it was shown (on the head), the game's again
             if (!proxy && e.PoseLocked) { EnsurePoseLock(e); RecoverWorldLock(e); }
