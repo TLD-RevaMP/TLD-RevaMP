@@ -1090,7 +1090,11 @@ namespace TLDRevamp.Net
                     var d = RecordCodec.Decode(rec);
                     if (d == null || d.items.Count == 0) { AddReject(net, d == null ? "undecodable" : "empty"); return; }
                     JoinReceived(net, d.items[0].prefabID);
-                    if (FarFromHere(hasState ? pos : d.items[0].transform.pos)) { LostPartBack(AddFar(net, owner, epoch, d, hasState, pos, rot)); Tpa.ObjectApplied(net); break; }
+                    if (FarFromHere(hasState ? pos : d.items[0].transform.pos))
+                    {
+                        var farPrefabs = new List<int>(); foreach (var r0 in d.items) farPrefabs.Add(r0.prefabID);
+                        LostPartBack(AddFar(net, owner, epoch, d, hasState, pos, rot), farPrefabs); Tpa.ObjectApplied(net); break;
+                    }
                     uint rootOld = d.items[0].id;
                     var prefabs = new List<int>(); foreach (var r0 in d.items) prefabs.Add(r0.prefabID);
                     var order = new List<uint>();

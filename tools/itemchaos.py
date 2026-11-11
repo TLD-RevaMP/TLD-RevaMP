@@ -14,6 +14,7 @@ Scripted runs of what the reports did, then a random monkey (--seed, --steps).
 aud-break-late kills one rabbit a run: --break far|late --break-kept 0|1 (not --ab).
 aud-rabbit-locked: the game's lock and unlock on a rabbit's limbs, then its death (--ab).
 aud-host-grab: the host grabs what the joiner holds, standing beside them (--ab).
+aud-part-lost: --part-members 0 runs the refetch without giving what hung on the part back to its car (before v0.69.2).
 --only skips the monkey unless --monkey is there too. --slow waits the old fixed times instead of until the machines agree.
 --ab adds the census scenarios' round with the check off (40 s each: proves the gap stays without it; --slow has it too).
 The screen gets the scenario heads and a short result; everything else is in the run's folder (printed at the end, or
@@ -60,6 +61,7 @@ if RELAY == "off": RELAY = None
 SEED, STEPS = arg("--seed", 1, int), arg("--steps", 60, int)
 ONLY = [x for x in arg("--only", "").split(",") if x]
 SLOW, AB = "--slow" in sys.argv, "--ab" in sys.argv or "--slow" in sys.argv
+PART_MEMBERS = arg("--part-members", 1, int)   # aud-part-lost: 0 = what hung on a lost part isn't the car's again (before v0.69.2)
 MONKEY = "--monkey" in sys.argv or not (ONLY or "--no-monkey" in sys.argv)
 SRC = pathlib.Path(os.environ.get("TLD_PLAYSAVE_DIR", "")).expanduser()
 SRC_NAME = os.environ.get("TLD_PLAYSAVE", "autosave1")
@@ -833,10 +835,14 @@ def scripted(h, L, car, tracked, cars):
         beside(h, h.ent(car)); beside(L, L.ent(car), (-2.6, 0, 0)); time.sleep(1)
         h.s(f"mp claim {car}"); wait(3, lambda: not h.ents()[car]["proxy"])
         for on in (False, True) if AB else (True,):
-            L.s(f"set {T_}.RefetchParts {on}")
+            L.s(f"set {T_}.RefetchParts {on}"); L.s(f"set {T_}.LostPartMembers {bool(PART_MEMBERS)}")
             ms = [m for m in glued(h, car) if m["i"] > 0 and m.get("lp") and math.hypot(*m["lp"]) < 30]
+            # one that carries something (a wheel with its tyre, a part with a can glued on it): what hung on it must come back too
+            on_it = {x.get("on") for x in h.members(car) if x.get("loaded")}
+            ms = [m for m in ms + [b for b in bolted(h, car) if b.get("lp") and math.hypot(*b["lp"]) < 30] if m["i"] > 0 and m["i"] in on_it] + ms
             if not ms: note("INVALID aud-part-lost: nothing left to take off"); break
             m = ms[0]; known = set(h.ents()); h.act("detach", net=car, item=m["i"]); time.sleep(2)
+            print(f"     taking off {m['name']} (member {m['i']}), carrying {[x['name'] for x in h.members(car) if x.get('on') == m['i']]}", flush=True)
             part = next((k for k, v in h.ents().items() if k not in known), None)
             if part is None or part not in L.ents(): note(f"INVALID aud-part-lost: no part on the joiner: {part}"); break
             if h.held(): h.s("dropheld")
@@ -851,6 +857,10 @@ def scripted(h, L, car, tracked, cars):
             if not back: print("     the off round's part goes everywhere:", str(h(f"deleteshare {part}"))[:60], flush=True)
             if back:
                 tracked.add(part)
+                # what hung on the part (a tyre on a wheel, a can glued on it) comes back with it: the car's members on both again
+                time.sleep(1); absent = [x["name"] for x, y in zip(h.members(car), L.members(car)) if x.get("loaded") and not y.get("loaded") and not x.get("stored") and not y.get("stored")]
+                print(f"     members of the car loaded on the host only: {absent or 'none'} (members back {L.s(f'get {T_}.LostMembersBack').get('value')})", flush=True)
+                if absent: finding("aud-part-lost", f"what hung on the lost part is gone on the joiner: {', '.join(absent)}", part)
                 h.s(f"mp moveitem {part} 3 0 ground"); time.sleep(3)
                 gap = max(abs(a - b) for a, b in zip(h.ents()[part]["pos"], L.ents()[part]["pos"]))
                 print(f"     moved by its owner: {gap:.2f} m apart, proxy {L.ents()[part]['proxy']}", flush=True)

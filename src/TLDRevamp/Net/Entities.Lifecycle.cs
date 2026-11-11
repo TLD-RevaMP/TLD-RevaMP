@@ -84,7 +84,7 @@ namespace TLDRevamp.Net
                     {
                         ByNet.Remove(e.NetId);
                         CopiesLost++;
-                        if (RefetchParts && e.PartIndex >= 0) _lostParts[e.NetId] = (e.ParentNet, e.PartIndex);
+                        if (RefetchParts && e.PartIndex >= 0) _lostParts[e.NetId] = new LostPart { Car = e.ParentNet, Idx = e.PartIndex, Hanging = HangingOn(e.ParentNet, e.PartIndex, __instance) };
                         // the members it let go (a crate's loot) would stay as frozen copies nobody moves, next to the
                         // fresh ones the refetch or the owner's re-share brings
                         if (ReshareSurvivors)
@@ -308,13 +308,31 @@ namespace TLDRevamp.Net
         /// off that car, which it no longer had to take off ("part absent"): the part stayed gone for the session.
         public static bool RefetchParts = true;
         public static long PartsRefetched, PartsRefetchNoRecord, PartsCameBack;
-        private static readonly Dictionary<uint, (uint car, int idx)> _lostParts = new Dictionary<uint, (uint, int)>();
+        private sealed class LostPart { public uint Car; public int Idx; public List<Hung> Hanging; }
+        private struct Hung { public int Member, Prefab; public Vector3 Local; }
+        private static readonly Dictionary<uint, LostPart> _lostParts = new Dictionary<uint, LostPart>();
+
+        /// What hung on a part that came off (the tyre on the wheel, a can glued on it) stays a member of its car (CameOff),
+        /// and goes when the game destroys the part: by the car's index, with what it is and where it sat on the part.
+        private static List<Hung> HangingOn(uint carNet, int idx, tosaveitemscript part)
+        {
+            var list = new List<Hung>();
+            if (!LostPartMembers || !ByNet.TryGetValue(carNet, out var car) || car.Items == null || part == null) return list;
+            var pt = part.transform;
+            for (int j = 0; j < car.Items.Count; j++)
+            {
+                var it = car.Items[j];
+                if (j == idx || it == null || it == part || !it.transform.IsChildOf(pt)) continue;
+                list.Add(new Hung { Member = j, Prefab = it.id, Local = pt.InverseTransformPoint(it.transform.position) });
+            }
+            return list;
+        }
 
         /// The refetch of a part whose car is still here says so: it needs the part itself. With the car gone too, the car's
         /// record and the part off it is the way back, as ever.
         private static void WriteLostPart(NetWriter w, uint net)
         {
-            if (_lostParts.TryGetValue(net, out var lost) && ByNet.ContainsKey(lost.car)) w.Bool(true);
+            if (_lostParts.TryGetValue(net, out var lost) && ByNet.ContainsKey(lost.Car)) w.Bool(true);
         }
 
         /// Server: the part as an object of its own, from the host's copy as it is now (as OrphanPart does). Not loaded on the
@@ -335,19 +353,57 @@ namespace TLDRevamp.Net
 
         /// A part this machine lost came back as an object: it is that part of its car again. Its own group (a tyre on the wheel)
         /// came with it, but the part alone is the part, as on the owner.
-        private static void LostPartBack(Ent e)
+        /// What hung on it came back too, as the part's record, but stayed nobody's: the car's members for them pointed at the
+        /// destroyed ones, the tyre or the glued can missing on this machine for good while the owner had them, and the census
+        /// repair couldn't bring back a member the copy's group no longer knew (itemchaos aud-part-lost, an old bug). They are
+        /// the car's members again, matched by what they are and where they sit on the part.
+        public static bool LostPartMembers = true;   // A/B: false = before v0.69.2
+        public static long LostMembersBack, LostMembersUnmatched;
+        private static void LostPartBack(Ent e, List<int> prefabs = null)
         {
             if (!_lostParts.TryGetValue(e.NetId, out var lost)) return;
             _lostParts.Remove(e.NetId);
-            e.ParentNet = lost.car; e.PartIndex = lost.idx;
+            e.ParentNet = lost.Car; e.PartIndex = lost.Idx;
+            ByNet.TryGetValue(lost.Car, out var car);
+            if (LostPartMembers && car != null && lost.Hanging != null && lost.Hanging.Count > 0) HangBack(e, car, lost, prefabs);
             if (e.Items.Count > 1) e.Items.RemoveRange(1, e.Items.Count - 1);
             if (e.ItemIds != null && e.ItemIds.Count > 1) e.ItemIds.RemoveRange(1, e.ItemIds.Count - 1);
             PartsCameBack++;
-            if (!ByNet.TryGetValue(lost.car, out var car) || lost.idx >= car.Items.Count) return;
-            (car.Split ?? (car.Split = new HashSet<int>())).Add(lost.idx);
-            car.Items[lost.idx] = e.Root;
+            if (car == null || lost.Idx >= car.Items.Count) return;
+            (car.Split ?? (car.Split = new HashSet<int>())).Add(lost.Idx);
+            car.Items[lost.Idx] = e.Root;
             uint id = e.Root != null ? e.Root.idInSave : e.RootId;
-            if (car.ItemIds != null && lost.idx < car.ItemIds.Count) car.ItemIds[lost.idx] = id;
+            if (car.ItemIds != null && lost.Idx < car.ItemIds.Count) car.ItemIds[lost.Idx] = id;
+        }
+
+        /// The part's record beyond its root, each to the car member it was: same prefab, nearest to where that one sat. Stored
+        /// away here (far, no live items), by prefab in record order: the members bind when it is placed (RebindMembers).
+        private static void HangBack(Ent e, Ent car, LostPart lost, List<int> prefabs)
+        {
+            var free = new List<Hung>(lost.Hanging);
+            var rt = e.Root != null ? e.Root.transform : null;
+            for (int k = 1; k < e.Items.Count; k++)
+            {
+                var it = e.Items[k];
+                int prefab = it != null ? it.id : prefabs != null && k < prefabs.Count ? prefabs[k] : -1;
+                uint id = it != null ? it.idInSave : e.ItemIds != null && k < e.ItemIds.Count ? e.ItemIds[k] : 0;
+                if (prefab < 0 || id == 0) continue;
+                int best = -1; float bestD = float.MaxValue;
+                for (int f = 0; f < free.Count; f++)
+                {
+                    if (free[f].Prefab != prefab) continue;
+                    float d = it != null && rt != null ? (rt.InverseTransformPoint(it.transform.position) - free[f].Local).sqrMagnitude : f;
+                    if (d < bestD) { bestD = d; best = f; }
+                }
+                if (best < 0) continue;
+                int j = free[best].Member; free.RemoveAt(best);
+                if (j >= car.Items.Count) continue;
+                car.Items[j] = it;
+                if (car.ItemIds != null && j < car.ItemIds.Count) car.ItemIds[j] = id;
+                LostMembersBack++;
+            }
+            LostMembersUnmatched += free.Count;
+            Plugin.Log.LogInfo($"lost part back: net {e.NetId} part {lost.Idx} of car {lost.Car}: {lost.Hanging.Count - free.Count} of {lost.Hanging.Count} members on it are the car's again");
         }
 
         /// The server relays the removal to everyone (the destroyer already cleaned itself), drops the entity and
