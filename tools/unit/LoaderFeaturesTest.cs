@@ -82,8 +82,37 @@ static class LoaderFeaturesTest
             var mod = loaded[0];
             Check("the mod's Logger is TLDLoader.Logger", mod.GetType().BaseType.GetProperty("Logger").GetValue(mod).GetType().FullName == "TLDLoader.Logger");
 
+            Section("a world replaced between two ticks (a save loaded from inside a world)");
+            int loads = seen.Count(x => x.StartsWith("loaded:")), unloads = seen.Count(x => x == "unload");
+            mainscript.s = new mainscript { player = new TLDRevamp.Fixtures.Player() };   // a new world object, a player already
+            ModHost.Tick();
+            Check("the old world's mods get OnUnload", seen.Count(x => x == "unload") == unloads + 1);
+            Check("and OnLoad again for the new world", seen.Count(x => x.StartsWith("loaded:")) == loads + 1);
+            ModHost.Tick();
+            Check("the same world on the next tick: nothing again", seen.Count(x => x.StartsWith("loaded:")) == loads + 1 && seen.Count(x => x == "unload") == unloads + 1);
+
             mainscript.s = null; ModHost.Tick();
             Check("back in the menu: isOnMainMenu true again", (bool)loader.GetField("isOnMainMenu").GetValue(null));
+
+            Section("mainscript.M.load: the world came from a save (latched; the game clears its own flag on the first frame)");
+            bool pending = false, fromSave = false, up = false;
+            // one look per frame: (world up now, load flag or SetLoad hook seen this frame) -> what a mod's OnLoad would read
+            bool Look(bool worldUp, bool loadSeen, bool joiner = false) { bool r = ModHost.FromSaveLatch(up, worldUp, loadSeen, joiner, ref pending, ref fromSave); up = worldUp; return r; }
+            Look(false, false);
+            Check("new game: false at OnLoad", !Look(true, false));
+            Look(false, false);                      // that world ends
+            Look(false, true);                       // a save chosen in the menu
+            Check("loaded save: true at OnLoad though the game's flag is already cleared", Look(true, false));
+            Check("still true later in that world", Look(true, false));
+            Look(false, false);                      // it ends
+            Check("a new game after a loaded one: false again", !Look(true, false));
+            Look(true, true);                        // a save chosen from inside the world (the flag set while it is up)
+            Look(false, false);                      // the world goes down; the game cleared its flag already
+            Check("a save loaded from inside a world: true", Look(true, false));
+            Look(false, false);
+            Check("and the next new game: false", !Look(true, false));
+            Look(false, false);
+            Check("a joiner (the host's world, never new): true even with no load seen", Look(true, false, joiner: true));
 
             Section("SettingStore: the settings file");
             var storeType = Type.GetType("TLDLoader.SettingStore, TLDLoader");

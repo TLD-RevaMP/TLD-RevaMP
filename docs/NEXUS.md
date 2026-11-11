@@ -80,7 +80,8 @@ their config folder, LoadAssets (asset bundles, textures, .obj meshes) and their
 lifecycle calls (DbLoad when the item database is ready, OnMenuLoad in the menu,
 OnLoad when the world is up, OnUnload when it goes away, Update, FixedUpdate and
 OnGUI). They can use the public game's names mainscript.M, itemdatabase.d and
-savedatascript.d, and read idInSave as the int it is there. TLD Loader's helpers work
+savedatascript.d, mainscript.M.seed, .load (the world came from a save) and .napszak
+(the day/night cycle), and read idInSave as the int it is there. TLD Loader's helpers work
 too: SettingAPI settings (read at start, drawn in the Revamp tab), ModLoader.LoadedMods,
 isOnMainMenu, Keybind, the Logger (UseLogger: a log file per mod in
 BepInEx\TLDLoaderMods\Logs), UseHarmony patches (all of a mod's or none, when one

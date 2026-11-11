@@ -623,7 +623,7 @@ namespace TLDRevamp
                 case "worldcheck": return Net.WorldCheck.Status();
                 case "heightdbg": { var ha = arg.Split(' '); var hic = System.Globalization.CultureInfo.InvariantCulture; return WorldHash.HeightDbg(double.Parse(ha[0], hic), double.Parse(ha[1], hic)); }
                 case "stale": return WorldHash.Stale(arg == "detail");
-                case "mods": return string.IsNullOrWhiteSpace(arg) ? ModHost.Status() : Net.ModBrowser.Bridge(arg);
+                case "mods": return string.IsNullOrWhiteSpace(arg) ? ModHost.Status() : arg.Trim() == "aliases" ? ModHost.AliasStatus() : Net.ModBrowser.Bridge(arg);
                 case "traffic": return AutopilotBridge.Status();
                 case "seatraw": return Net.Entities.SeatRaw();
                 case "poisaved":

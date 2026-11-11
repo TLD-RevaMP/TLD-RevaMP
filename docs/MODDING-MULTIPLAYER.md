@@ -236,7 +236,9 @@ back when the session ends.
 
 TLD Revamp already runs TLD Loader mods under BepInEx on the beta (the mod's lifecycle calls including DbLoad, its
 logger, its config and assets folders, LoadAssets, and the public game's singleton names mainscript.M, itemdatabase.d
-and savedatascript.d, which the preloader adds to the game's classes: TLDRevamp.Preloader.LoaderAliases; and where a
+and savedatascript.d, which the preloader adds to the game's classes: TLDRevamp.Preloader.LoaderAliases, with
+mainscript.seed/load/napszak as instance fields Unity never saves, set from the beta's world seed, its load flag (kept
+for the whole world: the game clears its own on the first frame) and napszakvaltakozas.s; and where a
 game field is the same integer with the other sign on the beta, as idInSave (an int there, a uint here), ModHost points
 the mod's own reference at the beta's type before loading it: LoaderRetarget, config Mods.RetargetLoaderMods; and TLD
 Loader's helpers: SettingAPI, LoadedMods, isOnMainMenu/GetCurrentScene, Keybind, Logger/UseLogger, UseHarmony (all of a

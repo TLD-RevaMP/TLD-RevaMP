@@ -27,6 +27,8 @@ namespace TLDRevamp
 
         private static readonly List<Loaded> Mods = new List<Loaded>();
         private static bool _started, _worldUp, _gameLoadedCalled, _menuCalled, _unloadCalled;
+        private static object _worldObj;
+        public static int WorldsReplaced;
         public static string Info = "not started";
 
         /// A/B (bridge `set`): false = before 2026-11-10 (no DbLoad; no public-game singleton names for the mods).
@@ -176,6 +178,21 @@ namespace TLDRevamp
         static partial void MakeLoadingPanel();
         static partial void BindEvents(Assembly stub);
         static partial void PatchModSafely(Loaded l);
+        static partial void GameAliases(bool worldUp);
+
+        /// Was the world now up loaded from a save? The game's own flag (DataFromMenuScript.load) is set when a save is
+        /// chosen - while the old world is still up when loading from inside one - and cleared on the new world's first
+        /// frame (mapSettingScript.Update), which can be before the mods' OnLoad, where they read mainscript.M.load to skip
+        /// their new-world work: a save would get that work twice. So a load seen at any time (the flag, or the game's
+        /// save screen's Load or the menu's Continue since the last look) is pending until the next world comes up, and decides that world: true from
+        /// then until it ends. A joiner's world is the host's, never new: always true there.
+        internal static bool FromSaveLatch(bool wasUp, bool worldUp, bool loadSeen, bool joiner, ref bool pending, ref bool fromSave)
+        {
+            if (loadSeen) pending = true;
+            if (wasUp && !worldUp) fromSave = false;
+            if (!wasUp && worldUp) { fromSave = pending; pending = false; }
+            return joiner || fromSave;
+        }
 
         private static void Scene(bool inWorld)
         {
@@ -231,6 +248,19 @@ namespace TLDRevamp
             // appears with the world and is gone when it ends, which is what OnLoad
             // and OnUnload are about.
             bool worldUp = mainscript.s != null && mainscript.s.player != null;
+            // Another world in this one's place between two ticks: a save loaded from inside a world (the save screen's
+            // Load reloads the scene, and the new world's player exists before the next tick). The player check alone
+            // saw no change: before 2026-11-11 the mods got no OnUnload for the old world and no OnLoad for the new one.
+            object worldNow = worldUp ? (object)mainscript.s : null;
+            bool replaced = LoaderFeatures && worldUp && _worldUp && !ReferenceEquals(worldNow, _worldObj);
+            _worldObj = worldNow;
+            if (replaced)
+            {
+                WorldsReplaced++;
+                _unloadCalled = true; foreach (var l in Mods) Call(l, l.OnUnload, "OnUnload");
+                _gameLoadedCalled = false; _menuCalled = false;
+                GameAliases(false);   // the old world ended (for mainscript.M.load)
+            }
             if (worldUp != _worldUp)
             {
                 bool wasUp = _worldUp;
@@ -245,6 +275,7 @@ namespace TLDRevamp
             // The menu is the game's own main-menu scene; the world is up whenever the
             // player exists. In the menu the player does not exist, so a mod that asked
             // for the menu gets its OnMenuLoad there.
+            GameAliases(worldUp);   // ModHost.Game.cs: mainscript.M.seed/load/napszak, before the mods' OnLoad below
             bool inMenu = !worldUp && !_gameLoadedCalled && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != menuhandler.sceneName;
             if (inMenu && !_menuCalled) { _menuCalled = true; foreach (var l in Mods) Call(l, l.OnMenuLoad, "OnMenuLoad"); }
             // OnLoad once the world is actually up (the player exists), as TLDLoader calls it after the game loaded

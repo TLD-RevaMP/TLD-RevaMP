@@ -24,6 +24,8 @@ public class FeaturesMod : Mod
         Logger.LogCritical("a critical line");
     }
 
+    public override void OnUnload() { Seen.Add("unload"); }
+
     public override void OnMenuLoad() { Seen.Add("menu:" + ModLoader.isOnMainMenu + ":" + ModLoader.GetCurrentScene()); }
     public override bool LoadInMenu => true;
 }

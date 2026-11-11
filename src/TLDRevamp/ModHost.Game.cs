@@ -21,6 +21,56 @@ namespace TLDRevamp
 
         static partial void BindEvents(Assembly stub) => Events.Bind(stub);
 
+        /// A/B (bridge `set`): false = before 2026-11-11 (mainscript.M.seed/load/napszak exist but stay 0/false/null).
+        public static bool GameAliasesOn = true;
+        private static bool _fromSave, _loadPending, _aliasWasUp;
+        private static FieldInfo _fSeed, _fLoad, _fNapszak;
+        private static bool _aliasLooked;
+        private static bool _loadSignal;   // a save was chosen since the last look (the flag may be set and cleared between looks)
+
+        // The two game calls that set DataFromMenuScript.load: the save screen's Load (an existing file) and the menu's
+        // Continue. Not SetLoad itself: a one-line setter the JIT inlines into them, so a patch on it never runs (2026-11-11:
+        // a reloaded save read load=false with it).
+        [HarmonyLib.HarmonyPatch(typeof(newSaveScreenScript), nameof(newSaveScreenScript.Load))]
+        private static class LoadChosen { [HarmonyLib.HarmonyPrefix] private static void Prefix(string _name) { if (File.Exists(_name)) _loadSignal = true; } }
+
+        [HarmonyLib.HarmonyPatch(typeof(menuhandler), nameof(menuhandler.AutoContinue))]
+        private static class ContinueChosen { [HarmonyLib.HarmonyPrefix] private static void Prefix() => _loadSignal = true; }
+
+        /// The public game's mainscript.seed / load / napszak (the preloader adds them, NotSerialized) set from the beta's
+        /// world seed, whether the world came from a save, and its day/night cycle.
+        static partial void GameAliases(bool worldUp)
+        {
+            if (!GameAliasesOn || !LoaderFeatures) return;
+            if (!_aliasLooked)
+            {
+                _aliasLooked = true;
+                const BindingFlags f = BindingFlags.Public | BindingFlags.Instance;
+                _fSeed = typeof(mainscript).GetField("seed", f); _fLoad = typeof(mainscript).GetField("load", f); _fNapszak = typeof(mainscript).GetField("napszak", f);
+            }
+            var dm = DataFromMenuScript.s;
+            bool signal = _loadSignal; _loadSignal = false;
+            bool load = FromSaveLatch(_aliasWasUp, worldUp, (dm != null && dm.load) || signal, Net.Mp.Client != null, ref _loadPending, ref _fromSave);
+            _aliasWasUp = worldUp;
+            var m = mainscript.s;
+            if (m == null) return;
+            try
+            {
+                if (_fSeed != null && dm != null) _fSeed.SetValue(m, dm.seed);
+                if (_fLoad != null) _fLoad.SetValue(m, load);
+                if (_fNapszak != null && !ReferenceEquals(_fNapszak.GetValue(m), napszakvaltakozas.s)) _fNapszak.SetValue(m, napszakvaltakozas.s);
+            }
+            catch (Exception e) { GameAliasesOn = false; Plugin.Log.LogWarning("ModHost: mainscript.seed/load/napszak: " + e.Message); }
+        }
+
+        public static string AliasStatus()
+        {
+            var m = mainscript.s;
+            if (m == null) return "{\"world\":false}";
+            return "{\"seed\":" + (_fSeed?.GetValue(m) ?? "null") + ",\"load\":" + ((_fLoad?.GetValue(m) as bool?) == true ? "true" : "false") +
+                   ",\"napszak\":" + (_fNapszak?.GetValue(m) != null ? "true" : "false") + ",\"gameSeed\":" + (DataFromMenuScript.s?.seed.ToString() ?? "null") + "}";
+        }
+
         /// UseHarmony, safely: all of a mod's patches or none. TLD Loader runs PatchAll on the mod's assembly; on the beta a
         /// mod written for the public game breaks the game itself that way:
         /// - a patch whose code names a class that can't load here throws inside the game's own method on every call
