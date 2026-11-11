@@ -99,7 +99,37 @@ namespace TLDRevamp.Fixes
             // root, and its whole hierarchy's colliders (a car's ~200) were measured for each such item every second —
             // the streamer's once-a-second hitch grew from ~120 to ~300 ms (DevTest, 2026-11-10)
             bool loose = it.transform.parent == null;
-            return nearest < float.MaxValue && (!Near || !loose || nearest <= Reach(it, id, p) + NearM);
+            if (nearest < float.MaxValue && (!Near || !loose || nearest <= Reach(it, id, p) + NearM)) return true;
+            return nearest < float.MaxValue && Near && loose && Footprint && Supported(it);
+        }
+
+        /// The ray goes down from the item's middle: a plank lying across a repair pit, or a trailer standing over one, has
+        /// the pit's floor 3 m under its middle and its ends or wheels on the edges. Held for HoldMaxS (2 minutes in the
+        /// air, then dropped), as if the floor were still to come (big world gas station: 3 planks held the whole 2 minutes,
+        /// a trailer seen floating, YujiroX2 2026-11-11). Anything solid within NearM under the item's lowest point, anywhere
+        /// under its footprint, carries it. A floor that isn't there yet is under none of it.
+        /// A/B: Footprint false = the middle's ray only (before v0.69.2).
+        public static bool Footprint = true;
+        public static long FootprintCarried;
+        private static readonly Collider[] _over = new Collider[32];
+        private static bool Supported(tosaveitemscript it)
+        {
+            _cols.Clear(); it.transform.GetComponentsInChildren(false, _cols);
+            var b = new Bounds(); bool any = false;
+            foreach (var c in _cols)
+            {
+                if (c == null || !c.enabled || c.isTrigger || c is WheelCollider) continue;
+                if (!any) { b = c.bounds; any = true; } else b.Encapsulate(c.bounds);
+            }
+            if (!any) return false;
+            const float up = 0.2f;   // what it rests on touches its lowest point
+            var half = new Vector3(b.extents.x, (NearM + up) * 0.5f, b.extents.z);
+            var centre = new Vector3(b.center.x, b.min.y + up - half.y, b.center.z);
+            int n = Physics.OverlapBoxNonAlloc(centre, half, _over, Quaternion.identity, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            var root = it.transform.root;
+            for (int i = 0; i < n; i++)
+                if (_over[i] != null && _over[i].transform.root != root) { FootprintCarried++; return true; }
+            return false;
         }
 
         /// Hitched cars and trailers (A/B: HitchPairs false = each on its own, as before).
@@ -162,6 +192,6 @@ namespace TLDRevamp.Fixes
 
         public static string Stats => "{\"enabled\":" + (Enabled ? "true" : "false") + ",\"near\":" + (Near ? "true" : "false") + ",\"held\":" + Held + ",\"heldFar\":" + HeldFar +
                                       ",\"released\":" + Released + ",\"timedOut\":" + TimedOut + ",\"waiting\":" + _held.Count +
-                                      ",\"hitchPairs\":" + (HitchPairs ? "true" : "false") + ",\"heldForPartner\":" + HeldForPartner + ",\"partnersLetGo\":" + PartnersLetGo + "}";
+                                      ",\"footprint\":" + (Footprint ? "true" : "false") + ",\"footprintCarried\":" + FootprintCarried + ",\"hitchPairs\":" + (HitchPairs ? "true" : "false") + ",\"heldForPartner\":" + HeldForPartner + ",\"partnersLetGo\":" + PartnersLetGo + "}";
     }
 }

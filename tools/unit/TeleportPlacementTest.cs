@@ -149,6 +149,32 @@ static class TeleportPlacementTest
         Physics.Hits = p => new[] { new RaycastHit { collider = ground, point = new Vector3(0, 0, 0), distance = .5f } };
         Check(!(bool)prefix.Invoke(null, new object[] { pickup, true }), "nothing is let go while a world is loading");
         TLDRevamp.Fixes.LoadFreeze.Holding = false;
+
+        // A plank across a repair pit (big world gas station, 2026-11-11): the ray from its middle finds the pit's floor 4 m
+        // down, its ends lie on the edges. Held in the air for 2 minutes before; carried by what is under its footprint now.
+        // A floor not there yet is under none of it: still held.
+        Func<tosaveitemscript> plank = () =>
+        {
+            var it = new tosaveitemscript(); it.RB = new Rigidbody { transform = it.transform, isKinematic = true };
+            it.transform.position = new Vector3(20, 3, 20);
+            it.transform.Colliders.Add(new Collider { transform = it.transform });
+            it.Unfrozen = () => it.RB.isKinematic = false;
+            return it;
+        };
+        var edge = new Collider();
+        Physics.Hits = p => new[] { new RaycastHit { collider = ground, point = new Vector3(p.x, -1, p.z), distance = 4.5f } };
+        Physics.Box = (p, e) => new[] { edge };
+        TLDRevamp.Fixes.UnfreezeOnGround.Footprint = false;
+        var p1 = plank();
+        Check(!(bool)prefix.Invoke(null, new object[] { p1, true }) && p1.RB.isKinematic, "A/B: Footprint off holds a plank over a pit (before)");
+        TLDRevamp.Fixes.UnfreezeOnGround.Footprint = true;
+        var p2 = plank();
+        Check((bool)prefix.Invoke(null, new object[] { p2, true }), "a plank over a pit is carried by its ends");
+        Physics.Box = (p, e) => Array.Empty<Collider>();
+        var p3 = plank();
+        Check(!(bool)prefix.Invoke(null, new object[] { p3, true }) && p3.RB.isKinematic, "nothing under any of it (a floor still to come): held");
+        Physics.Box = (p, e) => new[] { p3.transform.Colliders[0] };
+        Check(!(bool)prefix.Invoke(null, new object[] { p3, true }), "its own collider doesn't carry it");
         Console.WriteLine($"Teleport placement: {checks} checks passed");
     }
 }
@@ -228,7 +254,7 @@ namespace UnityEngine
         public static Vector3 operator -(Vector3 a,Vector3 b) => new Vector3(a.x-b.x,a.y-b.y,a.z-b.z);
         public static Vector3 operator *(Vector3 a,float b) => new Vector3(a.x*b,a.y*b,a.z*b);
     }
-    public struct Quaternion { }
+    public struct Quaternion { public static Quaternion identity => default; }
     public enum QueryTriggerInteraction { UseGlobal, Ignore, Collide }
     public static class Physics
     {
@@ -241,6 +267,7 @@ namespace UnityEngine
         public static int RaycastNonAlloc(Vector3 p,Vector3 dir,RaycastHit[] buf,float dist,int layers,QueryTriggerInteraction trigger) { var h=Hits(p); Array.Copy(h,buf,Math.Min(h.Length,buf.Length)); return Math.Min(h.Length,buf.Length); }
         public static int OverlapCapsuleNonAlloc(Vector3 a,Vector3 b,float radius,Collider[] buf,int layers,QueryTriggerInteraction trigger) { LastCapsuleTrigger = trigger; return Capsule(a,buf); }
         public static Collider[] OverlapBox(Vector3 p,Vector3 ext,Quaternion q,int layers,QueryTriggerInteraction trigger) => Box(p,ext);
+        public static int OverlapBoxNonAlloc(Vector3 p,Vector3 ext,Collider[] buf,Quaternion q,int layers,QueryTriggerInteraction trigger) { var h=Box(p,ext); Array.Copy(h,buf,Math.Min(h.Length,buf.Length)); return Math.Min(h.Length,buf.Length); }
     }
     public static class Time { public static float realtimeSinceStartup; public static double realtimeSinceStartupAsDouble => realtimeSinceStartup; }
     public static class Mathf

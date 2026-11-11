@@ -16,6 +16,7 @@ MAX_MS = 5.0
 ap = argparse.ArgumentParser()
 ap.add_argument("savedir", nargs="?"); ap.add_argument("name", nargs="?"); ap.add_argument("--newgame", type=int, help="a new world with this seed instead of a save")
 ap.add_argument("--ab", action="store_true"); ap.add_argument("--top", type=int, default=10); ap.add_argument("--trace", action="store_true")
+ap.add_argument("--frozen", type=float, default=0, help="also list the bodies still frozen near the player (stillfrozen) until this many seconds after the load")
 ap.add_argument("--set", action="append", default=[], help="PATH=VALUE through the bridge before each load (A/B of other switches)")
 a = ap.parse_args()
 files = []
@@ -54,6 +55,17 @@ def watch(label, enabled):
               f"{'never' if x['freeAt'] < 0 else format(x['freeAt'], '.1f') + ' s':>7}  moved {x['moved']:6.2f} m (height {x.get('dy', 0):+.2f})"
               + f"  [{x.get('item')}]" + (f"  hitch gap {x['gap0']:.2f}->{x['gapMax']:.2f} m, ball {x['ball0']:.2f}->{x['ballMax']:.2f} m on {x['hitched']}" if x['gap0'] >= 0 else ""), flush=True)
     if a.trace: print(b("loadtrace")["trace"], flush=True)
+    t0 = time.time() - r.get("t", 0)
+    for at in (45, 90, 150, 240):
+        if at > a.frozen: break
+        while time.time() - t0 < at: time.sleep(1)
+        try: fr = b("stillfrozen 200")["bodies"]
+        except RuntimeError as ex: print(f"  still frozen at {at} s: no answer ({ex})", flush=True); break
+        # a living creature's limbs are kinematic by design (the rabbits' 14 bones each)
+        up = [x for x in fr if x["above"] > 0.3 and not x["locked"] and not x["held"] and not any(c in x["root"] for c in ("Nyul", "Ragdol"))]
+        print(f"  still frozen at {at} s: {len(fr)} kinematic bodies within 200 m, {len(up)} of them more than 0.3 m above what is under them:", flush=True)
+        for x in sorted(up, key=lambda x: -x["above"])[:25]:
+            print(f"     {x['root']:<28} {x['body']:<24} {x['above']:7.2f} m up  {x['dist']:6.1f} m away  item {x['item']}  ground hold {x['groundHold']}  parent {x['parent']}", flush=True)
     for c in ("loadfreeze", "unfreezeground"):
         try: print(f"  {c}:", b(c), flush=True)
         except RuntimeError: pass
