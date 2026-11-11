@@ -15,6 +15,7 @@ namespace TLDRevamp.Net
                                  && Time.realtimeSinceStartup - se.ClaimedAt < ClaimEpochGraceS;
         /// How long after its claim a claimer's old-epoch messages still count: its Owner reply's round trip, with room.
         public static float ClaimEpochGraceS = 3f;
+        public static long PartOffAlreadyOff;
         public static bool GluedPartOff = true;         // A/B: false = only a part bolted into a slot can come off for everyone (before)
         public static bool PartOffMotionSlack = true;   // A/B: false = fixed 50 m from the last accepted car pose
         public static bool SplitParentsCarry = true;    // A/B: false = only a split member bolted back onto its car is a slot parent
@@ -186,6 +187,10 @@ namespace TLDRevamp.Net
             var pos = new Vector3d(r.F64(), r.F64(), r.F64()); var rot = new Quaternion(r.F32(), r.F32(), r.F32(), r.F32());
             if (!r.Bad && r.Remaining > 0) { ServerCarriedOff(from, carNet, epoch, (int)r.VarU32(), pos, rot, r); return; }
             Server.TryGetValue(carNet, out var car);
+            // off already (another player's take-off, split here first): the sender's own detach agrees with it. Refused, the
+            // sender was told "a part that came off your car could not be shared" for a part that was (itemchaos glue
+            // scenarios: the owner's part-off after the host took a glued thing off its car)
+            if (!r.Bad && r.Remaining == 0 && car != null && car.SplitOff.Contains(idx)) { PartOffAlreadyOff++; SessionLog.Event("part-off-already", carNet, item: idx, from: from, epoch: epoch, result: "already detached or gone"); return; }
             // the previous owner's too, within HandoverAcceptS, stamped with the epoch it owned in: in a crash takeover both
             // machines simulate the crash for a moment and the parts its own physics threw off were refused ("wrong owner"),
             // on screen off there and on everywhere else (as ServerCarriedOff already allows)
