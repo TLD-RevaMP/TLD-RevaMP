@@ -20,7 +20,7 @@ public sealed class Builder(Store store, Action<string> log)
         return (b, Files.CanReflink(Path.Combine(g.GameDir, "UnityPlayer.dll"), store.Root));
     }
 
-    public async Task<CopyInfo> Make(string name, Kind kind, string? version = null, string? reference = null)
+    public async Task<CopyInfo> Make(string name, Kind kind, string? version = null, string? reference = null, bool playerEdition = false)
     {
         if (!Store.ValidName(name)) throw new UserError($"'{name}' can't be a copy's name: letters, digits, . _ - (up to 40)");
         var dir = store.PathOf(name);
@@ -30,7 +30,7 @@ public sealed class Builder(Store store, Action<string> log)
         var reflink = Files.CanReflink(Path.Combine(g.GameDir, "UnityPlayer.dll"), store.Root);
         log($"Making '{name}' ({kind.ToString().ToLowerInvariant()}) in {dir}");
         log($"Game files from {g.GameDir} (Steam build {g.BuildId ?? "?"}), " + (reflink ? "as a reflink copy (shares disk blocks with Steam's)" : "as a full copy"));
-        var c = new CopyInfo { Name = name, Kind = kind, Dir = dir, Made = DateTime.UtcNow, Reflink = reflink, SourceRef = kind == Kind.Source ? reference ?? SourceBuild.DefaultRef : null };
+        var c = new CopyInfo { Name = name, Kind = kind, Dir = dir, Made = DateTime.UtcNow, Reflink = reflink, SourceRef = kind == Kind.Source ? reference ?? SourceBuild.DefaultRef : null, PlayerEdition = kind == Kind.Source && playerEdition };
         Directory.CreateDirectory(dir);
         try
         {

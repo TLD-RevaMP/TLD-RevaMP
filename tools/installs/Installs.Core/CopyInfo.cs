@@ -18,6 +18,10 @@ public sealed class CopyInfo
     public CommitInfo? Commit { get; set; }
     public string? SourceRef { get; set; }
     public bool UpdateBeforeLaunch { get; set; } = true;
+    /// <summary>Source copies: built as the player edition (-p:RevampEdition=player, TLDRevamp.PlayerEdition: what a release gives
+    /// players, without the developer settings, keys and overlays). BuiltPlayerEdition: what the installed build is.</summary>
+    public bool PlayerEdition { get; set; }
+    public bool BuiltPlayerEdition { get; set; }
     public int? NewerCommits { get; set; }
     /// <summary>SHA-256 of the release or dev zip it was installed from (a test build: of TLDRevamp.dll).</summary>
     public string? RevampSha256 { get; set; }
@@ -103,7 +107,7 @@ public sealed class CopyInfo
         Kind.Vanilla => "vanilla",
         Kind.Release => "release",
         Kind.Dev => "dev build",
-        Kind.Source => "source",
+        Kind.Source => PlayerEdition ? "source, player build" : "source",
         _ => "test",
     };
 }

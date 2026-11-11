@@ -38,6 +38,8 @@ public sealed class MainWindow : Window
     readonly RadioButton rbClean = new() { GroupName = "kind" }, rbVanilla = new() { GroupName = "kind" }, rbRelease = new() { GroupName = "kind", IsChecked = true },
                          rbDev = new() { GroupName = "kind" }, rbTest = new() { GroupName = "kind" }, rbSource = new() { GroupName = "kind" };
     readonly TextBox refBox = new() { Text = SourceBuild.DefaultRef, Watermark = "branch or commit SHA", IsEnabled = false };
+    /// <summary>A source copy built as the player edition: what a release gives players (TLDRevamp.PlayerEdition).</summary>
+    readonly CheckBox playerBox = new() { Content = "Player build: what a release gives players (no developer settings, keys or overlays)", FontSize = 12, IsEnabled = false };
     readonly TextBlock estimateText = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
     readonly TextBlock sourceText = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
     readonly Button makeButton = new() { Content = "Make copy", HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
@@ -57,6 +59,7 @@ public sealed class MainWindow : Window
         makeButton.Classes.Add("accent");
         makeButton.Click += async (_, _) => await MakeClicked();
         foreach (var rb in new[] { rbClean, rbVanilla, rbRelease, rbDev, rbTest, rbSource }) rb.IsCheckedChanged += (_, _) => KindChanged();
+        playerBox.IsCheckedChanged += (_, _) => KindChanged();
         if (Env.RepoDir == null)
             foreach (var rb in new[] { rbDev, rbTest }) { rb.IsEnabled = false; ToolTip.SetTip(rb, "built from a checkout of the repository: run TLD Copies from one"); }
         var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
@@ -150,6 +153,7 @@ public sealed class MainWindow : Window
         p.Children.Add(releaseBox);
         p.Children.Add(Choice(rbSource, "Newest dev, built here", "The newest commit, no draft needed. Requires Git and the .NET SDK."));
         p.Children.Add(refBox);
+        p.Children.Add(playerBox);
         p.Children.Add(Choice(rbDev, "Dev build", "This checkout built as a dev build (bridge off)"));
         p.Children.Add(Choice(rbTest, "Test", "This checkout's test build, debug bridge on"));
         Res(estimateText, TextBlock.ForegroundProperty, "Muted");
@@ -203,6 +207,10 @@ public sealed class MainWindow : Window
             var auto = new CheckBox { Content = "Update to the newest commit before launching", IsChecked = c.UpdateBeforeLaunch, FontSize = 12, IsEnabled = !busy && !isRunning };
             auto.IsCheckedChanged += (_, _) => { c.UpdateBeforeLaunch = auto.IsChecked == true; c.Save(); };
             s.Children.Add(auto);
+            var player = new CheckBox { Content = "Player build (what a release gives players: no developer settings, keys or overlays)", IsChecked = c.PlayerEdition, FontSize = 12, IsEnabled = !busy && !isRunning };
+            ToolTip.SetTip(player, "built with RevampEdition=player at the next Build or launch; off: the full dev build");
+            player.IsCheckedChanged += (_, _) => { c.PlayerEdition = player.IsChecked == true; c.Save(); };
+            s.Children.Add(player);
             var reference = new TextBox { Text = c.SourceRef, Watermark = "branch or commit SHA", FontSize = 12, IsEnabled = !busy && !isRunning };
             s.Children.Add(reference);
             var build = Btn("Build"); build.IsEnabled = !busy && !isRunning;
@@ -485,10 +493,11 @@ public sealed class MainWindow : Window
     {
         releaseBox.IsEnabled = rbRelease.IsChecked == true;
         refBox.IsEnabled = rbSource.IsChecked == true;
+        playerBox.IsEnabled = rbSource.IsChecked == true;
         // a name to start from, while the box holds one of these suggestions (or nothing)
-        var suggestions = new[] { "clean", "vanilla", "release", "dev", "test", "source" }.Concat(releases.Select(r => "release-" + r.Version)).ToHashSet();
+        var suggestions = new[] { "clean", "vanilla", "release", "dev", "test", "source", "player" }.Concat(releases.Select(r => "release-" + r.Version)).ToHashSet();
         if (nameBox.Text is { Length: > 0 } now && !suggestions.Any(x => now == x || now.StartsWith(x + "-"))) return;
-        string baseName = rbSource.IsChecked == true ? "source" : rbClean.IsChecked == true ? "clean" : rbVanilla.IsChecked == true ? "vanilla" : rbDev.IsChecked == true ? "dev" : rbTest.IsChecked == true ? "test"
+        string baseName = rbSource.IsChecked == true ? (playerBox.IsChecked == true ? "player" : "source") : rbClean.IsChecked == true ? "clean" : rbVanilla.IsChecked == true ? "vanilla" : rbDev.IsChecked == true ? "dev" : rbTest.IsChecked == true ? "test"
                         : releaseBox.SelectedIndex >= 0 && releaseBox.SelectedIndex < releases.Count ? "release-" + releases[releaseBox.SelectedIndex].Version : "release";
         var name = baseName;
         for (int i = 2; store.Get(name) != null; i++) name = $"{baseName}-{i}";
@@ -552,7 +561,8 @@ public sealed class MainWindow : Window
         string? version = kind == Kind.Release && releaseBox.SelectedIndex >= 0 && releaseBox.SelectedIndex < releases.Count ? releases[releaseBox.SelectedIndex].Version : null;
         if (kind == Kind.Release && version == null && releases.Count > 0) { Log("✗ choose a release"); return; }
         var reference = kind == Kind.Source ? refBox.Text?.Trim() : null;
-        await Job($"Making {name}", log => new Builder(store, log).Make(name, kind, version, reference));
+        bool player = kind == Kind.Source && playerBox.IsChecked == true;   // read on the UI thread
+        await Job($"Making {name}", log => new Builder(store, log).Make(name, kind, version, reference, player));
         nameBox.Text = ""; KindChanged();
     }
 

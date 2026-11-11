@@ -11,7 +11,9 @@ tld-installs: copies of The Long Drive next to Steam's, each with its own saves 
   tld-installs make NAME --release [VERSION]  BepInEx + a TLD RevaMP release (default: the one the installer is pinned to)
   tld-installs make NAME --dev                BepInEx + a dev build of this checkout (tools/devrelease.py --dry-run)
   tld-installs make NAME --source [REF]       newest dev, built here (default origin/dev; Git + .NET SDK required)
+  tld-installs make NAME --source [REF] --player   the same, built as the player edition (what a release gives players)
   tld-installs build NAME                    fetch and rebuild a source copy now
+  tld-installs player NAME [on|off]          show or set whether a source copy is a player build (rebuilt at the next build)
   tld-installs update NAME --ref REF         switch a source copy to another branch or commit
   tld-installs make NAME --test               BepInEx + this checkout's test build, debug bridge on (what the test tools run)
   tld-installs update NAME [--release VERSION]   game files up to Steam's, then the mod again (a release copy keeps its
@@ -97,10 +99,12 @@ try
         {
             string? version = Opt("--release");
             string? reference = Opt("--source");
+            bool player = Flag("--player");
             Kind kind = reference != null ? Kind.Source : version != null ? Kind.Release : Flag("--clean") ? Kind.Clean : Flag("--vanilla") ? Kind.Vanilla : Flag("--dev") ? Kind.Dev : Flag("--test") ? Kind.Test
                       : throw new UserError("make NAME needs --clean, --vanilla, --release [VERSION], --dev or --test");
             var name = Name();
-            await b.Make(name, kind, version is { Length: > 0 } ? version : null, reference is { Length: > 0 } ? reference : null);
+            if (player && kind != Kind.Source) throw new UserError("--player is for source copies (make NAME --source [REF] --player)");
+            await b.Make(name, kind, version is { Length: > 0 } ? version : null, reference is { Length: > 0 } ? reference : null, player);
             return 0;
         }
         case "update":
@@ -115,6 +119,14 @@ try
         case "build":
             await b.Build(Name());
             return 0;
+        case "player":
+        {
+            var c = store.Need(Name());
+            if (c.Kind != Kind.Source) throw new UserError("player builds are for source copies");
+            if (argv.Count > 2) { c.PlayerEdition = argv[2] switch { "on" => true, "off" => false, _ => throw new UserError("player: on or off") }; c.Save(); }
+            Console.WriteLine($"{c.Name}: " + (c.PlayerEdition ? "player build" : "dev build") + (c.BuiltPlayerEdition != c.PlayerEdition ? " (rebuilt at the next build or launch)" : ""));
+            return 0;
+        }
         case "sync":
             b.Sync(Name());
             return 0;

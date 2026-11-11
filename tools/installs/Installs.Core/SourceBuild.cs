@@ -231,10 +231,10 @@ public sealed class SourceBuild
         var sha = Resolve(reference);
         var dst = Path.Combine(c.GameDir, "BepInEx", "plugins", "TLDRevamp");
         var installed = Path.Combine(dst, "TLDRevamp.dll");
-        if (!force && c.Commit?.Sha == sha && File.Exists(installed) && IsCurrent(installed, sha))
+        if (!force && c.Commit?.Sha == sha && File.Exists(installed) && IsCurrent(installed, sha) && c.BuiltPlayerEdition == c.PlayerEdition)
         {
             c.SourceRef = reference; c.NewerCommits = 0; c.Save();
-            log("  already built commit " + sha[..7]);
+            log("  already built commit " + sha[..7] + (c.PlayerEdition ? " (player build)" : ""));
             return false;
         }
         string sdks;
@@ -248,6 +248,13 @@ public sealed class SourceBuild
         if (version.Length == 0) throw new UserError("couldn't read the source's RevaMP version");
         version += "-dev." + sha[..7];
         var extra = new List<string> { "-p:RevampVersion=" + version };
+        if (c.PlayerEdition)
+        {
+            extra.Add("-p:RevampEdition=player");
+            log(plugin.Contains("IsPlayerEdition")
+                ? "  player build (RevampEdition=player): no developer settings, keys or overlays"
+                : "  WARNING: commit " + sha[..7] + " predates the player build: this copy gets the normal build until its source has it");
+        }
         if (!plugin.Contains("public const string BaseVersion"))
             extra.Add("-p:CustomAfterMicrosoftCommonTargets=" + LegacyTargets(plugin, version, sha));
         bool disableServers = true;
@@ -287,7 +294,7 @@ public sealed class SourceBuild
             Files.CopyFile(Path.Combine(Repo, file), Path.Combine(dst, Path.GetFileName(file)));
         Builder.SetCfg(c.GameDir, "Debug", "Bridge", "false"); c.Bridge = false;
         c.Commit = commit; c.SourceRef = reference; c.NewerCommits = 0;
-        c.RevampVersion = version; c.RevampSource = sha; c.RevampSha256 = hash;
+        c.RevampVersion = version; c.RevampSource = sha; c.RevampSha256 = hash; c.BuiltPlayerEdition = c.PlayerEdition;
         c.Updated = DateTime.UtcNow;
         c.Save();
         return true;
