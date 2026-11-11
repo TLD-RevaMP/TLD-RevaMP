@@ -200,8 +200,28 @@ namespace TLDRevamp
                 }
             }
 
+            /// The pause menu opening and closing, once each. mainscript.Update calls SetCursorVisible every frame, so raising
+            /// on each call fired OnUnpause ~60 times a second while playing (OnPause while paused); its argument isn't the
+            /// pause either (FreeCursorScreens frees the cursor under the join screen). The game's own pauseMenuOpen is read
+            /// there instead, and only a change raises. A new world starts from its own state, with nothing raised.
+            private static mainscript _pauseWorld;
+            private static bool _paused;
+            internal static long PauseChecks;
+
             [HarmonyLib.HarmonyPatch(typeof(mainscript), nameof(mainscript.SetCursorVisible))]
-            private static class Pause { [HarmonyLib.HarmonyPrefix] private static void Prefix(bool _state) => Raise(_state ? _pause : _unpause); }
+            private static class Pause
+            {
+                [HarmonyLib.HarmonyPrefix]
+                private static void Prefix(mainscript __instance)
+                {
+                    PauseChecks++;
+                    bool now = __instance.pauseMenuOpen;
+                    if (!ReferenceEquals(__instance, _pauseWorld)) { _pauseWorld = __instance; _paused = now; return; }
+                    if (now == _paused) return;
+                    _paused = now;
+                    Raise(now ? _pause : _unpause);
+                }
+            }
         }
 
     }
