@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- A library the FeaturesMod fixture derives a type from, and that the test leaves OUT of the mods folder: that type
+       then fails to load, as a workshop mod's type that names a game class the beta lacks. -->
+  <PropertyGroup><TargetFramework>netstandard2.1</TargetFramework><AssemblyName>MissingDep</AssemblyName><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="MissingDep.cs" />
+    <Compile Remove="$(MSBuildThisFileDirectory)../../TestCrashGuard.cs" />
+  </ItemGroup>
+</Project>

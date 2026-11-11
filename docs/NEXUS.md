@@ -80,8 +80,13 @@ their config folder, LoadAssets (asset bundles, textures, .obj meshes) and their
 lifecycle calls (DbLoad when the item database is ready, OnMenuLoad in the menu,
 OnLoad when the world is up, OnUnload when it goes away, Update, FixedUpdate and
 OnGUI). They can use the public game's names mainscript.M, itemdatabase.d and
-savedatascript.d, and read idInSave as the int it is there. There must be no other
-mod loader installed at the same time.
+savedatascript.d, and read idInSave as the int it is there. TLD Loader's helpers work
+too: SettingAPI settings (read at start, drawn in the Revamp tab), ModLoader.LoadedMods,
+isOnMainMenu, Keybind, the Logger (UseLogger: a log file per mod in
+BepInEx\TLDLoaderMods\Logs), UseHarmony patches (all of a mod's or none, when one
+would not work on the beta), and its game events (sitting, saving, loading, pausing). Not yet: TLD Loader's own item registration (RegisterItem). A mod
+with one part that can't load on the beta still runs its other parts. There must be no
+other mod loader installed at the same time.
 
 REQUIREMENTS
 - Your own copy of The Long Drive on Steam, on the BETA branch.

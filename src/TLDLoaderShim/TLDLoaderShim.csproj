@@ -22,6 +22,11 @@
     <Reference Include="$(MSBuildThisFileDirectory)../../lib/UnityEngine.AssetBundleModule.dll" Private="false" />
     <Reference Include="$(MSBuildThisFileDirectory)../../lib/UnityEngine.ImageConversionModule.dll" Private="false" />
     <Reference Include="$(MSBuildThisFileDirectory)../../lib/UnityEngine.PhysicsModule.dll" Private="false" />
+    <!-- SettingAPI (IMGUI), Keybind (Input), Events (the game's seatscript), UseHarmony (Harmony) -->
+    <Reference Include="$(MSBuildThisFileDirectory)../../lib/UnityEngine.IMGUIModule.dll" Private="false" />
+    <Reference Include="$(MSBuildThisFileDirectory)../../lib/UnityEngine.InputLegacyModule.dll" Private="false" />
+    <Reference Include="$(MSBuildThisFileDirectory)../../lib/Assembly-CSharp.dll" Private="false" />
+    <Reference Include="$(MSBuildThisFileDirectory)../../lib/0Harmony.dll" Private="false" />
   </ItemGroup>
   <!-- a lib/ made before LoadAssets (no AssetBundleModule yet) would build a release without it, silently -->
   <Target Name="LibHasAssetBundles" BeforeTargets="CoreCompile"

@@ -238,7 +238,11 @@ TLD Revamp already runs TLD Loader mods under BepInEx on the beta (the mod's lif
 logger, its config and assets folders, LoadAssets, and the public game's singleton names mainscript.M, itemdatabase.d
 and savedatascript.d, which the preloader adds to the game's classes: TLDRevamp.Preloader.LoaderAliases; and where a
 game field is the same integer with the other sign on the beta, as idInSave (an int there, a uint here), ModHost points
-the mod's own reference at the beta's type before loading it: LoaderRetarget, config Mods.RetargetLoaderMods). DbLoad runs
+the mod's own reference at the beta's type before loading it: LoaderRetarget, config Mods.RetargetLoaderMods; and TLD
+Loader's helpers: SettingAPI, LoadedMods, isOnMainMenu/GetCurrentScene, Keybind, Logger/UseLogger, UseHarmony (all of a
+mod's patches or none: a patch naming what the beta lacks would throw inside the game's own method), Events,
+GameUtil, CopyComponent — ModHost.LoaderFeatures; not its item registration, which builds on the public game's item
+categories). DbLoad runs
 for every mod with LoadInDB once per item database, in the order of the mods' IDs, so every machine changes and adds
 items the same way. Most of those mods were written for single player. A converter would help them into multiplayer
 without rewriting them:

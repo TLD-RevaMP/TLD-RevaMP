@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- A TLD Loader mod using the loader features TLD Loader has beyond the lifecycle (UseLogger, LoadedMods, the scene),
+       with a second type in the same DLL that can't load (its base class is in MissingDep, which isn't shipped). -->
+  <PropertyGroup><TargetFramework>netstandard2.1</TargetFramework><AssemblyName>FeaturesMod</AssemblyName><LangVersion>latest</LangVersion><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="FeaturesMod.cs" />
+    <Compile Remove="$(MSBuildThisFileDirectory)../../TestCrashGuard.cs" />
+    <ProjectReference Include="../../../../src/TLDLoaderShim/TLDLoaderShim.csproj" AdditionalProperties="ImportDirectoryBuildTargets=false" />
+    <ProjectReference Include="MissingDep.csproj" Private="false" />
+  </ItemGroup>
+</Project>

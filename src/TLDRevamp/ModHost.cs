@@ -14,7 +14,7 @@ namespace TLDRevamp
     ///
     /// Everything goes through reflection: TLDRevamp has no compile-time reference to the stub, so a missing stub or a
     /// broken mod can never stop TLDRevamp's own types (and patches) from loading.
-    public static class ModHost
+    public static partial class ModHost
     {
         private sealed class Loaded
         {
@@ -22,6 +22,7 @@ namespace TLDRevamp
             public MethodInfo OnMenuLoad, OnLoad, OnUnload, Config, Update, FixedUpdate, OnGUI;   // null: not overridden
             public MethodInfo DbLoad, DbLoadOld;   // with LoadInDB: DbLoad and the older dbLoad, both as TLDLoader calls them
             public string LastError;
+            public int BrokenTypes;   // types in its DLL that failed to load on the beta (UseHarmony is not applied then)
         }
 
         private static readonly List<Loaded> Mods = new List<Loaded>();
@@ -52,25 +53,50 @@ namespace TLDRevamp
                 stub.GetType("TLDLoader.ModLoader").GetField("ConfigRoot").SetValue(null, Path.Combine(BepInEx.Paths.ConfigPath, "TLDLoaderMods"));
                 stub.GetType("TLDLoader.ModLoader").GetField("ModsFolder")?.SetValue(null, ModsDir);   // assets: <ModsDir>/Assets/<ID>
                 var hostLogger = stub.GetType("TLDLoader.HostLogger");
+                Loader = stub.GetType("TLDLoader.ModLoader");
+                var gameLog = BepInEx.Logging.Logger.CreateLogSource("TLD Loader mods");
+                Loader.GetField("Echo")?.SetValue(null, (Action<string, int>)((m, lv) => { if (lv == 2) gameLog.LogError(m); else if (lv == 1) gameLog.LogWarning(m); else gameLog.LogInfo(m); }));
+                MakeLoadingPanel();
+                BindEvents(stub);
                 foreach (var dll in dlls)
                 {
-                    Type[] types;
+                    // A DLL whose types partly fail to load (one names a game type the beta lacks) still offers the rest:
+                    // before 2026-11-11 the whole DLL was skipped, and a type whose check threw stopped every mod after it
+                    // (Backpack Mod: "Could not load type of field 'Amt.ModItemsSpawner:_building'" - no Loader mod loaded).
+                    Type[] types; int broken = 0;
                     try { types = LoadMod(dll).GetTypes(); }
-                    catch (ReflectionTypeLoadException e) { Plugin.Log.LogError("ModHost: " + Path.GetFileName(dll) + " types failed: " + e.LoaderExceptions[0]); continue; }
+                    catch (ReflectionTypeLoadException e)
+                    {
+                        types = Array.FindAll(e.Types ?? new Type[0], x => x != null);
+                        broken += (e.Types?.Length ?? 0) - types.Length;
+                        Plugin.Log.LogWarning("ModHost: " + Path.GetFileName(dll) + ": " + ((e.Types?.Length ?? 0) - types.Length) + " type(s) failed to load, the other " + types.Length + " are used: " + (e.LoaderExceptions.Length > 0 ? e.LoaderExceptions[0]?.Message : ""));
+                    }
                     catch (Exception e) { Plugin.Log.LogError("ModHost: " + Path.GetFileName(dll) + " failed to load: " + e.Message); continue; }
+                    // every type checked first, so a mod knows how many of its DLL's types failed before it starts
+                    var modTypes = new List<Type>();
                     foreach (var t in types)
                     {
-                        if (t.IsAbstract || !modBase.IsAssignableFrom(t)) continue;
+                        try { if (!t.IsAbstract && modBase.IsAssignableFrom(t)) modTypes.Add(t); }
+                        catch (Exception e) { broken++; Plugin.Log.LogWarning("ModHost: " + Path.GetFileName(dll) + ": type " + t.FullName + " skipped: " + e.Message); }
+                    }
+                    foreach (var t in modTypes)
+                    {
                         try
                         {
                             var mod = Activator.CreateInstance(t);
-                            var l = new Loaded { Mod = mod, File = Path.GetFileName(dll) };
+                            var l = new Loaded { Mod = mod, File = Path.GetFileName(dll), BrokenTypes = broken };
                             l.Id = (string)modBase.GetProperty("ID").GetValue(mod);
                             l.Name = (string)modBase.GetProperty("Name").GetValue(mod);
                             l.Version = (string)modBase.GetProperty("Version").GetValue(mod);
                             var log = BepInEx.Logging.Logger.CreateLogSource(l.Id);
-                            modBase.GetProperty("Logger").SetValue(mod, Activator.CreateInstance(hostLogger,
+                            // UseLogger: the mod's own log file (TLDLoader.Logger, echoed to BepInEx's log); otherwise BepInEx's
+                            object logger = null;
+                            if (LoaderFeatures && Flag(modBase, mod, "UseLogger"))
+                                try { logger = Activator.CreateInstance(stub.GetType("TLDLoader.Logger"), mod); }
+                                catch (Exception e) { Plugin.Log.LogWarning("ModHost: " + l.Id + ": its log file: " + (e.InnerException ?? e).Message); }
+                            modBase.GetProperty("Logger").SetValue(mod, logger ?? Activator.CreateInstance(hostLogger,
                                 (Action<string>)(m => log.LogInfo(m)), (Action<string>)(m => log.LogWarning(m)), (Action<string>)(m => log.LogError(m))));
+                            if (LoaderFeatures) Loader.GetMethod("HostAdd", BindingFlags.NonPublic | BindingFlags.Static)?.Invoke(null, new[] { mod });
                             bool menu = (bool)modBase.GetProperty("LoadInMenu").GetValue(mod);
                             // Every lifecycle method is bound the same way: the mod's own
                             // override, or nothing.  (OnMenuLoad additionally needs the mod
@@ -91,6 +117,7 @@ namespace TLDRevamp
                             }
                             Mods.Add(l);
                             Plugin.Log.LogInfo($"ModHost: loaded {l.Name} {l.Version} ({l.Id}) from {l.File}");
+                            if (LoaderFeatures) StartLikeLoader(l, modBase);
                         }
                         catch (Exception e) { Plugin.Log.LogError("ModHost: creating " + t.FullName + " failed: " + (e.InnerException ?? e)); }
                     }
@@ -114,6 +141,47 @@ namespace TLDRevamp
                 m => Plugin.Log.LogInfo("ModHost: " + m));
             if (string.IsNullOrEmpty(asm.Location)) Retargeted++;
             return asm;
+        }
+
+        /// A/B (bridge `set` before the mods load, or the config): false = before 2026-11-11 — no LoadedMods, no UseLogger
+        /// log file, no settings read at load, no UseHarmony patching, no isOnMainMenu/scene, no TLD Loader events.
+        public static bool LoaderFeatures = true;
+        private static Type Loader;
+        private static MethodInfo _hostScene;
+        public static int HarmonyPatched, ConfigsAtLoad, ConfigsAtLoadFailed;
+
+        private static bool Flag(Type modBase, object mod, string name)
+        {
+            try { return modBase.GetProperty(name) is PropertyInfo p && (bool)p.GetValue(mod); }
+            catch { return false; }
+        }
+
+        /// What TLD Loader does with a mod right after creating it, in its order: Config() once with the settings window
+        /// closed (a SettingAPI mod reads its saved values there; a mod that draws directly throws, as under TLD Loader,
+        /// and is told once), then UseHarmony (ModHost.Game.cs: guarded, not TLD Loader's plain PatchAll). OnMenuLoad comes later.
+        private static void StartLikeLoader(Loaded l, Type modBase)
+        {
+            var pass = Loader.GetMethod("HostConfigPass", BindingFlags.NonPublic | BindingFlags.Static);
+            if (l.Config != null && pass != null)
+            {
+                pass.Invoke(null, new[] { l.Mod, (object)false });
+                try { l.Config.Invoke(l.Mod, null); ConfigsAtLoad++; }
+                catch (Exception e) { ConfigsAtLoadFailed++; Plugin.Log.LogInfo("ModHost: " + l.Id + ": its Config() at load (settings not read there): " + (e.InnerException ?? e).Message); }
+                finally { pass.Invoke(null, new[] { l.Mod, (object)true }); }
+            }
+            if (Flag(modBase, l.Mod, "UseHarmony")) PatchModSafely(l);   // ModHost.Game.cs: per patch class, checked first
+        }
+
+        // the game-only parts (ModHost.Game.cs; not in the unit test's build): the loading panel and TLD Loader's events
+        static partial void MakeLoadingPanel();
+        static partial void BindEvents(Assembly stub);
+        static partial void PatchModSafely(Loaded l);
+
+        private static void Scene(bool inWorld)
+        {
+            if (!LoaderFeatures || Loader == null) return;
+            if (_hostScene == null) _hostScene = Loader.GetMethod("HostScene", BindingFlags.NonPublic | BindingFlags.Static);
+            try { _hostScene?.Invoke(null, new object[] { inWorld }); } catch { }
         }
 
         private static MethodInfo Overridden(Type t, Type modBase, string name)
@@ -167,6 +235,7 @@ namespace TLDRevamp
             {
                 bool wasUp = _worldUp;
                 _worldUp = worldUp;
+                Scene(worldUp);   // ModLoader.isOnMainMenu / GetCurrentScene
                 _gameLoadedCalled = false;
                 _menuCalled = false;
                 // Leaving the world unloads the mod: TLDLoader calls OnUnload when the

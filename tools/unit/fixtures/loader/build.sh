@@ -8,4 +8,5 @@ ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
 cd "$ROOT"
 dotnet build src/TLDLoaderShim/TLDLoaderShim.csproj -c Release -nologo -v q
 dotnet build tools/unit/fixtures/loader/RecorderMod.csproj -c Release -nologo -v q
+dotnet build tools/unit/fixtures/loader/FeaturesMod.csproj -c Release -nologo -v q
 echo "loader fixtures built"

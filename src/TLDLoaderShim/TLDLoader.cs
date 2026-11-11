@@ -7,27 +7,46 @@ using UnityEngine;
 #endif
 
 // Enough of TLDLoader's API for TLDLoader mods to run under BepInEx on the beta (where TLDLoader itself doesn't work):
-// the Mod base class and its lifecycle, its logger, the config and assets folders, and LoadAssets (asset bundles,
-// textures, OBJ meshes). TLDRevamp's ModHost finds the mods, creates them and calls their lifecycle: DbLoad/dbLoad once
-// the item database exists (mods with LoadInDB), OnMenuLoad in the menu, OnLoad once a game is loaded.
-// Written from TLDLoader's public API as mods use it (the workshop's 205 mods, 2026-11-10), not from its code.
+// the Mod base class and its lifecycle, its logger, the config and assets folders, LoadAssets (asset bundles,
+// textures, OBJ meshes), and its helpers (LoaderSettings.cs: SettingAPI; LoaderLogging.cs: Logger; LoaderExtras.cs:
+// Keybind, Events, GameUtil, ComponentExtensions). TLDRevamp's ModHost finds the mods, creates them and calls their
+// lifecycle: Config once at load, UseHarmony patches, DbLoad/dbLoad once the item database exists (mods with LoadInDB),
+// OnMenuLoad in the menu, OnLoad once a game is loaded.
+// The API is TLD Loader's, member for member as the workshop's mods call it (2026-11-11: every TLDLoader member the
+// 224 workshop DLLs reference, except item registration); the behaviour was checked against TLD Loader's, the code is
+// RevaMP's own.
 namespace TLDLoader
 {
     public interface ILogger
     {
+        void Log(string msg, Logger.LogLevel level = Logger.LogLevel.Info);
+        void LogDebug(string msg);
         void LogInfo(string msg);
         void LogWarning(string msg);
         void LogError(string msg);
+        void LogCritical(string msg);
     }
 
     /// The host's logger (BepInEx), handed over as three callbacks — TLDRevamp only reaches this assembly by reflection.
+    /// Debug goes out as info, critical as an error.
     public sealed class HostLogger : ILogger
     {
         private readonly Action<string> _info, _warn, _error;
         public HostLogger(Action<string> info, Action<string> warn, Action<string> error) { _info = info; _warn = warn; _error = error; }
+        public void Log(string msg, Logger.LogLevel level = Logger.LogLevel.Info)
+        {
+            switch (level)
+            {
+                case Logger.LogLevel.Warning: _warn?.Invoke(msg); break;
+                case Logger.LogLevel.Error: case Logger.LogLevel.Critical: _error?.Invoke(msg); break;
+                default: _info?.Invoke(msg); break;
+            }
+        }
+        public void LogDebug(string msg) => _info?.Invoke(msg);
         public void LogInfo(string msg) => _info?.Invoke(msg);
         public void LogWarning(string msg) => _warn?.Invoke(msg);
         public void LogError(string msg) => _error?.Invoke(msg);
+        public void LogCritical(string msg) => _error?.Invoke(msg);
     }
 
     public abstract class Mod
@@ -42,9 +61,35 @@ namespace TLDLoader
         /// The mod has files in Assets/<ID> next to the mods (LoadAssets, GetModAssetsFolder).
         public virtual bool UseAssetsFolder => false;
         public virtual float ConfigScrollHeight => 0f;
+        /// The host patches the mod's own assembly with Harmony (PatchAll) before its first lifecycle call.
+        public virtual bool UseHarmony => false;
+        /// The mod gets its own log file (Logs/<ID>/<ID>_<date>.log next to the mods) as its Logger.
+        public virtual bool UseLogger => false;
+        /// With UseLogger: also write each line to the game's log (BepInEx's here).
+        public virtual bool EchoToGameLog => true;
+        /// A number from the mod's ID (FNV-1, as TLD Loader computes it), the same on every machine.
+        public int Category => ModLoader.Fnv1(ID);
 
         /// Set by the host before any lifecycle call.
         public ILogger Logger { get; set; }
+
+        /// False during the host's first Config() call at load, where SettingAPI only reads the saved values; true once
+        /// Config() draws the settings window.
+        internal bool isConfigLoaded;
+
+#if TLD_UNITY
+        /// The mod's Harmony instance once HarmonyPatch ran (a HarmonyLib.Harmony; typed object so the base class never
+        /// needs Harmony loaded to exist — no workshop mod reads this field).
+        public object HarmonyInstance;
+
+        /// Patches the mod's assembly (the host calls it for UseHarmony mods; a mod may call it itself).
+        public void HarmonyPatch()
+        {
+            var h = new HarmonyLib.Harmony("com." + ID.ToLowerInvariant());
+            HarmonyInstance = h;
+            h.PatchAll(GetType().Assembly);
+        }
+#endif
 
         public virtual void DbLoad() { }
         public virtual void dbLoad() { }   // TLDLoader's older name: both are called
@@ -72,6 +117,46 @@ namespace TLDLoader
         }
 
         public static string GetModAssetsFolder(Mod mod) => Path.Combine(Path.Combine(ModsFolder, "Assets"), mod.ID);
+
+        /// Where SettingAPI keeps a mod's settings: its config folder.
+        public static string GetModSettingsFolder(Mod mod) => GetModConfigFolder(mod);
+
+        /// A UseLogger mod's log files: Logs/<ID> next to the mods.
+        public static string GetModLogFolder(Mod mod) => Path.Combine(Path.Combine(ModsFolder, "Logs"), mod.ID);
+
+        /// Every mod the host loaded, in load order.
+        public static List<Mod> LoadedMods { get; } = new List<Mod>();
+
+        /// True while no world is up (the host keeps it current, as TLD Loader does: mainscript doesn't exist then).
+        public static bool isOnMainMenu = true;
+
+        public enum CurrentScene { MainMenu, Game }
+        internal static CurrentScene CurrentGameScene = CurrentScene.MainMenu;
+        public static CurrentScene GetCurrentScene() => CurrentGameScene;
+
+        /// The host: a line for the game's log at a level (0 info, 1 warning, 2 error) — a UseLogger mod's echo.
+        public static Action<string, int> Echo;
+
+        // ---- the host's side (TLDRevamp's ModHost calls these by reflection)
+        internal static void HostAdd(Mod mod) { if (!LoadedMods.Contains(mod)) LoadedMods.Add(mod); }
+        internal static void HostScene(bool inWorld) { isOnMainMenu = !inWorld; CurrentGameScene = inWorld ? CurrentScene.Game : CurrentScene.MainMenu; }
+        internal static void HostConfigPass(Mod mod, bool drawing) => mod.isConfigLoaded = drawing;
+
+        internal static int Fnv1(string s)
+        {
+            unchecked
+            {
+                int h = -2128831035;
+                foreach (char c in s ?? "") { h ^= c; h *= 16777619; }
+                return h;
+            }
+        }
+
+#if TLD_UNITY
+        /// TLD Loader's "loading mods" panel: some mods check whether it is showing. Here it is an inactive object the
+        /// host makes once Unity runs, so `loading.activeSelf` reads false instead of throwing.
+        public static GameObject loading;
+#endif
     }
 
 #if TLD_UNITY
