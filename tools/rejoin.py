@@ -9,7 +9,7 @@
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
-from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
+from mplib import Agent, ensure_both, seeded_both, join_both, relay_both, join_cmd
 from roadkit import until, g
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
@@ -90,7 +90,7 @@ with game.ProtectedSession():
             except Exception: pass
             return st["ready"]
         for _try in range(3):
-            t0 = time.time(); L(f"mp joinid {sid}")
+            t0 = time.time(); L(join_cmd(h, sid))
             if until(ready_traced, 150): break
             L("mp stop"); time.sleep(3)
         else: sys.exit("LAPTOP NEVER REJOINED")

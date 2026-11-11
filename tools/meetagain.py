@@ -20,7 +20,7 @@ Census: `mp carparts <net>` — every part bolted into the car (slot → model) 
 import sys, os, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
-from mplib import Agent, ensure_both, seeded_both
+from mplib import Agent, ensure_both, seeded_both, join_cmd
 from roadkit import CAR01, g, car_ready, clear_road
 
 def arg(name, default, conv=str):
@@ -145,7 +145,7 @@ with game.ProtectedSession():
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     sid = h("net me")["steamId"]
     try:
-        h("mp host 27070"); L(f"mp joinid {sid}")
+        h("mp host 27070"); L(join_cmd(h, sid))
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafety.BlockAutoSave True"); L("set kaposztaleves.s.settings.god True")   # (the join reloads the world)
         OLD = "--old" in sys.argv   # A/B: both v0.66.2 fixes off on both machines

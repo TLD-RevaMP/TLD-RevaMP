@@ -125,7 +125,9 @@ def bridge_up():
 
 def backup_saves():
     if REMOTE:
-        name = f"saves-{datetime.datetime.now():%Y%m%d-%H%M%S}"
+        # "-second": with both test games on one account and machine (TLD_JOIN=ip) the two backups of one second were the
+        # same folder, and the second's copy failed (FileExistsError, deathsync/aimp 2026-11-11)
+        name = f"saves-{datetime.datetime.now():%Y%m%d-%H%M%S}-second"
         r = sh(f'set -e; B="$HOME/tld-revamp-backups/{name}"; mkdir -p "$B"; '
                f'[ -d "{RDOCS}/Saves" ] && cp -a "{RDOCS}/Saves" "$B/Saves"; cp -a "{RDOCS}"/*.tldc "$B/" 2>/dev/null || true; echo "$B"')
         if r.returncode != 0: sys.exit("remote save backup failed: " + r.stderr)

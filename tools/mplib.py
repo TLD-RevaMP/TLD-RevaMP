@@ -653,6 +653,13 @@ def relay_both(h, L, relay, tries=4):
                     print(f"relay_both: {ex}; again", flush=True); time.sleep(10)
 
 
+def join_cmd(h, steam_id=None):
+    """the joiner's join command for this setup: by address when both test games run on one account (TLD_JOIN=ip:
+    joining one's own Steam id is "invalid connection"), else the friend join by Steam id"""
+    if tldenv.JOIN == "ip": return f"mp join {tldenv.lan_ip()}:27070"
+    return f"mp joinid {steam_id or h('net me')['steamId']}"
+
+
 def join_both(h, L, tries=3, wait=60, rehost=True):
     """The laptop joins the host (the relay set by the caller); a connection lost while it is being made is tried again
     (2026-10-14: two of four first joins over iad ended "Lost connection to the host" before the host saw anything).
@@ -675,7 +682,7 @@ def join_both(h, L, tries=3, wait=60, rehost=True):
                 return False
         for k in range(tries):
             if rehost or k > 0: h("mp host 27070")
-            L(f"mp join {tldenv.lan_ip()}:27070" if tldenv.JOIN == "ip" else f"mp joinid {h('net me')['steamId']}")
+            L(join_cmd(h))
             t0 = time.time()
             while time.time() - t0 < wait:
                 try:

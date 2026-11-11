@@ -6,7 +6,7 @@ world), and once in: does it see the host's car moving with the host seated in i
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
-from mplib import Agent, ensure_both, seeded_both
+from mplib import Agent, ensure_both, seeded_both, join_cmd
 from roadkit import until, g, car_ready, clear_road
 
 RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"
@@ -30,7 +30,7 @@ with game.ProtectedSession():
         h("mp host 27070")
         h("autodrive on 13.9"); until(lambda: abs(float(g(h, "mainscript.s.player.Car.speed") or 0)) > 42, 45, 0.5)
         print("host driving at", g(h, "mainscript.s.player.Car.speed"), "km/h — the laptop joins", flush=True)
-        L(f"mp joinid {h('net me')['steamId']}")
+        L(join_cmd(h))
         if not until(lambda: L("mp status")["client"]["ready"], 150, 1): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafety.BlockAutoSave True")
         if "--no-hide" in sys.argv: L("set TLDRevamp.Net.RemotePlayers.HideFarSeated False")   # A: before v0.65.30

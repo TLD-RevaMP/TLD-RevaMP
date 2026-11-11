@@ -15,7 +15,7 @@
 import sys, os, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
-from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
+from mplib import Agent, ensure_both, seeded_both, join_both, relay_both, join_cmd
 from roadkit import g, car_ready, clear_road
 
 os.environ.setdefault("TLD_TEST_MODS", "CarTrailer,HeadUnit")   # the example mods stay installed
@@ -148,7 +148,7 @@ with game.ProtectedSession():
         print("  laptop leaves:", L("mp stop"), flush=True); time.sleep(5)
         print(f"  host after the leave: hats {len(named(h, hat[1]))}, player save {h('mp playersave')['last'] if 'error' not in h('mp playersave') else '-'}", flush=True)
         for _ in range(3):
-            L(f"mp joinid {sid}")
+            L(join_cmd(h, sid))
             if until(lambda: L("mp status")["client"]["ready"], 150): break
             L("mp stop"); time.sleep(3)
         L("set TLDRevamp.TestSafety.BlockAutoSave True"); setall(L, not OLD); L("set kaposztaleves.s.settings.god True")
