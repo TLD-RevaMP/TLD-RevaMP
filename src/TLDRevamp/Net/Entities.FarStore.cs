@@ -86,13 +86,14 @@ namespace TLDRevamp.Net
             if (_interestAcc < 0.5f) return;
             _interestAcc = 0f;
             Mp.Server.ReadyPeers(_peerPos);
+            // the locked objects' poses once (it ran for every object, once per player; only locked ones have one to follow)
+            if (_peerPos.Count > 0) foreach (var se in _serverLocked) ServerLockedPose(se);
             foreach (var kv in _peerPos)
             {
                 var known = KnownBy(kv.Key);
                 int n = 0;
                 foreach (var se in Server.Values)
                 {
-                    ServerLockedPose(se);
                     if (known.Contains(se.NetId)) { StateInterestCatchUp(kv.Key, se, kv.Value); continue; }
                     if (se.PartIndex >= 0) continue;   // parts go with their car
                     double dx = kv.Value.x - se.Where.x, dz = kv.Value.z - se.Where.z;
