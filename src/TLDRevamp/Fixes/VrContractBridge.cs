@@ -78,6 +78,9 @@ namespace TLDRevamp.Fixes
             {
                 var input = inputscript.i;
                 if (input == null) return;
+                // VR only: the stick move it takes away is the VR block's. In a flat game it zeroed the keys every seated
+                // frame: keyboard look in a car, leaning with run, the run-key trailer brake (Fixes.TrailerBrakes)
+                if (!mainscript.IsVR()) return;
                 if (!Contracts.Locomotion.Seated && !Contracts.Locomotion.Driving) return;
                 var intent = new VrMoveIntent
                 {
@@ -124,7 +127,7 @@ namespace TLDRevamp.Fixes
         /// This never writes a transform of its own: it only chooses between the two sources the game already has.
         internal static void ApplyRigPolicy(fpscontroller player)
         {
-            if (player == null) return;
+            if (player == null || !mainscript.IsVR()) return;   // a flat game's head follows its own look, as the game does
             var decision = Contracts.Rig.HeadDecision();
             if (decision.FromViewRoot) return;          // the game's own local head view: nothing to do
             var anim = player.anim;
