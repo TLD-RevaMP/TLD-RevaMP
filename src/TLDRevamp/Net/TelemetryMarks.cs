@@ -14,7 +14,7 @@ namespace TLDRevamp.Net
         /// and the same broken object was marked once by every machine (DevTest, 2026-11-10: three marks in 3 s for one
         /// Attachable07).
         public static int AutoSessionMax = 5;
-        public static long AutoRefused;
+        public static long AutoRefused, AutoOverLimit;
         private static readonly System.Collections.Generic.HashSet<string> _autoSubjects = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
         private static int _autoCount;
         internal static string AutoSubject(string note)
@@ -41,7 +41,20 @@ namespace TLDRevamp.Net
         {
             ulong key = from == 0 ? 0 : account != 0 ? account : 0xFFFFFFFF00000000UL | (uint)from;
             string auto = AutoSubject(note);
-            if (auto != null && (_autoCount >= AutoSessionMax || _autoSubjects.Contains(auto))) { AutoRefused++; return false; }
+            if (auto != null && (_autoCount >= AutoSessionMax || _autoSubjects.Contains(auto)))
+            {
+                AutoRefused++;
+                // a new problem after the session's limit: no recording, but named once in the session log and the game's
+                // log (both go into a report), not only counted
+                if (!_autoSubjects.Contains(auto) && _autoSubjects.Count < 256)
+                {
+                    _autoSubjects.Add(auto); AutoOverLimit++;
+                    note = Note(note);
+                    SessionLog.Event("auto-mark-over-limit", nets != null && nets.Length > 0 ? nets[0] : 0, from: from, result: note);
+                    Plugin.Log.LogWarning($"black box: {note} (not recorded: {AutoSessionMax} automatic marks this session already)");
+                }
+                return false;
+            }
             if (!Limit.Try(key, Time.realtimeSinceStartupAsDouble)) return false;
             if (auto != null) { _autoSubjects.Add(auto); _autoCount++; }
             note = Note(note); double st = SessionLog.St;
