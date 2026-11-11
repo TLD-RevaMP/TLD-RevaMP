@@ -234,6 +234,14 @@
       "source": "https://github.com/TLD-RevaMP/TLD-Mods/tree/main/mods/Rossa88",
       "versions": [
         {
+          "version": "0.2.0",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/rossa88-v0.2.0/Rossa88-0.2.0.zip",
+          "file": "BepInEx/plugins/Rossa88/Rossa88.dll",
+          "sha256": "a4596cc8efcbbba792923aa143786e4ea443b3deb55609dc63da82b3d84df11c",
+          "size": 1677764,
+          "revamp": "0.69.1"
+        },
+        {
           "version": "0.1.0",
           "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/rossa88-v0.1.0/Rossa88-0.1.0.zip",
           "file": "BepInEx/plugins/Rossa88/Rossa88.dll",
