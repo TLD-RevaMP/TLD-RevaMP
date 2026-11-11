@@ -17,9 +17,9 @@ namespace TLDRevamp.Net
         private static menuhandler _builtFor;
         private static TextMeshProUGUI _title, _count, _name, _version, _message, _question;
         private static readonly List<TextMeshProUGUI> Lines = new List<TextMeshProUGUI>();
-        /// A tape: the mod's name in its strip (bold, as large as it fits), the picture, and over the picture's bottom a dark
-        /// band with the version and the state (on, off, not installed, update) in the state's colour. Asked for
-        /// 2026-11-11: the name was small and nothing said the version or whether a mod was installed or on.
+        /// A tape: the mod's name (bold) and version in its strip, the picture, and in the picture's bottom-right corner a
+        /// small dark label with the state (on, off, not installed, update) in the state's colour. Asked for 2026-11-11:
+        /// the name was small and nothing said the version or whether a mod was installed or on.
         private sealed class Tile { internal GameObject Go; internal TextMeshProUGUI Name, Version, Info; internal Image Body; }
         private static readonly List<Tile> Tiles = new List<Tile>();
         private static Button _install, _remove, _source, _refresh, _up, _down, _toggle;
@@ -223,18 +223,19 @@ namespace TLDRevamp.Net
                 tile.Version.alignment = TextAlignmentOptions.Right; tile.Version.overflowMode = TextOverflowModes.Overflow;
                 tile.Version.margin = new Vector4(tile.Version.margin.x, tile.Version.margin.y, tile.Version.margin.z + 10f, tile.Version.margin.w);
                 tile.Name.margin = new Vector4(tile.Name.margin.x, tile.Name.margin.y, 120f, tile.Name.margin.w);
-                // a dark band over the bottom of the picture (the visible window, Mask2: the picture is bigger): version and state
-                var band = new GameObject("RevampModBand", typeof(RectTransform)); band.transform.SetParent(tp.Find("Mask2"), false);
-                var brt = (RectTransform)band.transform; brt.anchorMin = Vector2.zero; brt.anchorMax = new Vector2(1f, 0.26f);
-                brt.offsetMin = Vector2.zero; brt.offsetMax = Vector2.zero;
-                tile.Body = band.AddComponent<Image>(); tile.Body.raycastTarget = false; tile.Body.color = new Color(0.06f, 0.05f, 0.04f, 0.9f);
-                var go = new GameObject("RevampModInfo", typeof(RectTransform)); go.transform.SetParent(band.transform, false);
-                var irt = (RectTransform)go.transform; irt.anchorMin = Vector2.zero; irt.anchorMax = Vector2.one;
-                irt.offsetMin = new Vector2(10f, 4f); irt.offsetMax = new Vector2(-10f, -4f);
+                // the state: a small dark label in the picture's bottom-right corner (the visible window, Mask2: the picture
+                // is bigger), as wide as its text
+                var band = new GameObject("RevampModState", typeof(RectTransform)); band.transform.SetParent(tp.Find("Mask2"), false);
+                var brt = (RectTransform)band.transform; brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(1f, 0f);
+                brt.anchoredPosition = new Vector2(-8f, 8f);
+                tile.Body = band.AddComponent<Image>(); tile.Body.raycastTarget = false; tile.Body.color = new Color(0.06f, 0.05f, 0.04f, 0.85f);
+                var layout = band.AddComponent<HorizontalLayoutGroup>(); layout.padding = new RectOffset(10, 10, 3, 3);
+                layout.childControlWidth = layout.childControlHeight = true; layout.childForceExpandWidth = layout.childForceExpandHeight = false;
+                var fit = band.AddComponent<ContentSizeFitter>(); fit.horizontalFit = fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                var go = new GameObject("RevampModStateText", typeof(RectTransform)); go.transform.SetParent(band.transform, false);
                 tile.Info = go.AddComponent<TextMeshProUGUI>(); tile.Info.font = tile.Name.font; tile.Info.raycastTarget = false;
-                tile.Info.alignment = TextAlignmentOptions.Center; tile.Info.enableWordWrapping = false; tile.Info.richText = true;
-                tile.Info.enableAutoSizing = true; tile.Info.fontSizeMin = 14; tile.Info.fontSizeMax = 44; tile.Info.color = Color.white;
-                tile.Info.overflowMode = TextOverflowModes.Ellipsis;
+                tile.Info.alignment = TextAlignmentOptions.Right; tile.Info.enableWordWrapping = false; tile.Info.richText = true;
+                tile.Info.enableAutoSizing = false; tile.Info.fontSize = 24f; tile.Info.color = Color.white;
                 tp.GetComponent<Button>().onClick.AddListener(() => { _selected = _page * Tiles.Count + i; _confirm.SetActive(false); Refresh(); });
                 Tiles.Add(tile);
             }
