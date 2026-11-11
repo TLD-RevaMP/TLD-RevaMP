@@ -42,7 +42,7 @@ public static class BugReports
             _ => c.KindLabel,
         };
         var commit = c.Commit is { } ci
-            ? $"**Commit:** [{ci.Sha} ({ci.Short})](https://github.com/Normal99/TLD-RevaMP/commit/{ci.Sha})  \n" +
+            ? $"**Commit:** [{ci.Sha} ({ci.Short})](https://github.com/TLD-RevaMP/TLD-RevaMP/commit/{ci.Sha})  \n" +
               $"**Commit title:** {ci.Title}  \n**Commit date:** {ci.Date}  \n**Ref:** {c.SourceRef ?? c.RevampSource}  \n**Dirty:** {ci.Dirty.ToString().ToLowerInvariant()}  \n"
             : "";
         var pointer = telemetry == null ? "Telemetry: kept private (0 files)." :

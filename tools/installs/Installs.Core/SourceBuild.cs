@@ -14,7 +14,10 @@ public sealed record CommitInfo(string Sha, string Title, string Date, bool Dirt
 /// <summary>The app's own clone. Every fetch, checkout and build holds its cache lock, including across processes.</summary>
 public sealed class SourceBuild
 {
-    public const string Remote = "https://github.com/Normal99/TLD-RevaMP";
+    public const string Remote = "https://github.com/TLD-RevaMP/TLD-RevaMP";
+    /// <summary>Where the repository lived before (it moved to the TLD-RevaMP organisation in 2026-11). A cache cloned
+    /// from there is pointed at <see cref="Remote"/> instead of being refused.</summary>
+    public static readonly string[] OldRemotes = ["https://github.com/Normal99/TLD-RevaMP"];
     public const string DefaultRef = "origin/dev";
     public const string GitHelp = "Source builds need Git: install Git from https://git-scm.com/downloads and restart TLD Copies.";
     public const string SdkHelp = "Source builds need the .NET SDK: install the .NET 10 SDK from https://dotnet.microsoft.com/download/dotnet/10.0 (the SDK, not just the runtime) and restart TLD Copies.";
@@ -94,8 +97,15 @@ public sealed class SourceBuild
             if (Directory.Exists(Repo)) throw new UserError("the source cache contains an incomplete clone: remove its TLD-RevaMP folder and retry");
             Exec(cache, "git", "clone", "--no-checkout", "--origin", "origin", Remote, Repo);
         }
-        if (Exec(Repo, "git", "remote", "get-url", "origin").TrimEnd('/') != Remote)
-            throw new UserError("the source cache has another origin: not used");
+        var origin = Exec(Repo, "git", "remote", "get-url", "origin").Trim().TrimEnd('/');
+        if (origin.EndsWith(".git", StringComparison.OrdinalIgnoreCase)) origin = origin[..^4];
+        if (!string.Equals(origin, Remote, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!Array.Exists(OldRemotes, o => string.Equals(o, origin, StringComparison.OrdinalIgnoreCase)))
+                throw new UserError("the source cache has another origin: not used");
+            log("The repository moved to " + Remote + ": the source cache follows it");
+            Exec(Repo, "git", "remote", "set-url", "origin", Remote);
+        }
         var r = Invoke(Repo, "git", ["fetch", "--prune", "origin"]);
         if (r.Code == 0) return;
         if (Offline.IsMatch(r.Err + "\n" + r.Out))

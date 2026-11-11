@@ -17,7 +17,7 @@ public sealed record Release(string Tag, string Version, bool Prerelease, DateTi
 public static class Releases
 {
     /// <summary>The GitHub repository of the releases (TLD_REPO to use a fork).</summary>
-    public static string Repo => Env.Get("TLD_REPO") ?? "Normal99/TLD-RevaMP";
+    public static string Repo => Env.Get("TLD_REPO") ?? "TLD-RevaMP/TLD-RevaMP";
 
     // BepInEx as installer/install.sh pins it (BEPINEX_URL / BEPINEX_SHA256); read from the checkout's install.sh when
     // there is one. tools/installs/Installs.Tests checks these match it.

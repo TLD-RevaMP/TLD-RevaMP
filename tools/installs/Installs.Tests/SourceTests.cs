@@ -19,6 +19,7 @@ public sealed class SourceTests : IDisposable
     int checkoutFailures, fetchFailures;
     string fetchError = "fatal: You are attempting to fetch a088dcebd9ee2d5352060b3cccff1d7805c334a8, which is in the commit graph file but not in the object database.";
     bool failClone, failFresh, failReset, rejectDisable, legacy, buildDirty, checkoutDirty;
+    string? origin;   // the source cache's origin as git reports it (null: SourceBuild.Remote)
     string? buildCommit, checkoutHead;
     Action? beforeCopy;
     readonly List<string> logs = new();
@@ -70,7 +71,8 @@ public sealed class SourceTests : IDisposable
         }
         if (args[0] == "checkout" && (checkoutFailures-- > 0 || failFresh && cwd != Repo)) return new(1, "", "unable to create file: File exists");
         if (args[0] == "reset" && failReset) return new(1, "", "reset failed");
-        if (args[0] == "remote") output = SourceBuild.Remote;
+        if (args[0] == "remote" && args[1] == "get-url") output = origin ?? SourceBuild.Remote;
+        if (args[0] == "remote" && args[1] == "set-url") origin = args[^1];
         if (args[0] == "rev-parse") output = args[^1] == "HEAD" ? checkoutHead ?? head : head;
         if (args[0] == "rev-list") output = "3";
         if (args[0] == "status" && checkoutDirty) output = " M src/TLDRevamp/Plugin.cs";
@@ -272,11 +274,35 @@ public sealed class SourceTests : IDisposable
     }
 
     [Fact]
+    public void ACacheFromTheOldAddressFollowsTheRepositoryToItsNewOne()
+    {
+        var c = Copy(); var b = Builder();
+        Directory.CreateDirectory(Path.Combine(Repo, ".git"));
+        Write(Path.Combine(Repo, "src", "TLDRevamp", "Plugin.cs"), "public const string BaseVersion = \"0.69.1\";");
+        Write(Path.Combine(Repo, "packaging", "approved-mods.txt")); Write(Path.Combine(Repo, "COPYING"));
+        origin = "https://github.com/Normal99/TLD-RevaMP.git";
+        b.Build(c, Managed, Core);
+        Assert.Contains(calls, x => x.Args.SequenceEqual(new[] { "remote", "set-url", "origin", SourceBuild.Remote }));
+        Assert.Equal(SourceBuild.Remote, origin);
+        Assert.DoesNotContain(calls, x => x.Args[0] == "clone");
+    }
+
+    [Fact]
+    public void ACacheFromAnotherRepositoryIsStillRefused()
+    {
+        var c = Copy(); var b = Builder();
+        Directory.CreateDirectory(Path.Combine(Repo, ".git"));
+        origin = "https://github.com/someone/TLD-RevaMP";
+        Assert.Contains("another origin", Assert.Throws<UserError>(() => b.Build(c, Managed, Core)).Message);
+        Assert.DoesNotContain(calls, x => x.Args[0] == "remote" && x.Args[1] == "set-url");
+    }
+
+    [Fact]
     public void OfflineFetchSaysSoAndLeavesTheCacheAlone()
     {
         var c = Copy(); var b = Builder(); b.Build(c, Managed, Core); calls.Clear();
         DamageObjects(); fetchFailures = 1;
-        fetchError = "fatal: unable to access 'https://github.com/Normal99/TLD-RevaMP/': Could not resolve host: github.com";
+        fetchError = "fatal: unable to access 'https://github.com/TLD-RevaMP/TLD-RevaMP/': Could not resolve host: github.com";
         Assert.Contains("couldn't reach GitHub", Assert.Throws<UserError>(() => b.Newer(c)).Message);
         Assert.Single(calls, x => x.Args[0] == "fetch");
         Assert.True(File.Exists(Path.Combine(Objects, "pack", "multi-pack-index")));
@@ -457,7 +483,7 @@ public sealed class SourceTests : IDisposable
         var body = BugReports.Body(c, "Doors stay shut");
         Assert.Contains(head, body); Assert.Contains("aaaaaaa", body); Assert.Contains("Fix the bus", body);
         Assert.Contains(c.Commit.Date, body); Assert.Contains("**Ref:** origin/dev", body); Assert.Contains("**Dirty:** true", body);
-        Assert.Contains("https://github.com/Normal99/TLD-RevaMP/commit/" + head, body);
+        Assert.Contains("https://github.com/TLD-RevaMP/TLD-RevaMP/commit/" + head, body);
         Assert.DoesNotContain(tmp, body); Assert.DoesNotContain("LogOutput", body);
     }
 
