@@ -1311,6 +1311,7 @@ namespace TLDRevamp
                 case "unfreezeground": return Fixes.UnfreezeOnGround.Stats;
                 case "loadwatch": return Fixes.LoadWatch.Stats();
                 case "loadfreeze": return Fixes.LoadFreeze.Stats;
+                case "fallrescue": return arg == "test" ? Fixes.FallRescue.Test() : Fixes.FallRescue.Stats;
                 case "stillfrozen": return Fixes.LoadFreeze.StillFrozen(string.IsNullOrEmpty(arg) ? 150f : float.Parse(arg, System.Globalization.CultureInfo.InvariantCulture));
                 case "loadtrace": return "{\"trace\":" + Json.Str(Fixes.LoadWatch.TraceText) + "}";
                 case "terrainkeep": return Fixes.TerrainRestartKeep.Stats();

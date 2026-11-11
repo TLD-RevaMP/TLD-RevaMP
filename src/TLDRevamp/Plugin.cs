@@ -353,7 +353,7 @@ namespace TLDRevamp
             Fixes.ItemSpawnSpread.Tick();
             Fixes.Sandstorms.Tick();
             Fixes.Rabbits.Tick();
-            Fixes.GrassCameraThrottle.Tick(); Fixes.IdleTextureStreaming.Tick(); Fixes.PartConditionIdle.Tick(); Fixes.FarItemLookup.Tick(); Fixes.RenderOptions.Tick();
+            Fixes.GrassCameraThrottle.Tick(); Fixes.IdleTextureStreaming.Tick(); Fixes.PartConditionIdle.Tick(); Fixes.FarItemLookup.Tick(); Fixes.RenderOptions.Tick(); Fixes.FallRescue.Tick();
             } catch (Exception e) { Fault(0, "fixes", e); }
             try {
             if (Plugin.KeyDown(Plugin.KeyReplayRecord)) Replay.ReplayRecorder.Toggle();
