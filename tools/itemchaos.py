@@ -14,6 +14,7 @@ Scripted runs of what the reports did, then a random monkey (--seed, --steps).
 aud-break-late kills one rabbit a run: --break far|late --break-kept 0|1 (not --ab).
 aud-rabbit-locked: the game's lock and unlock on a rabbit's limbs, then its death (--ab).
 aud-host-grab: the host grabs what the joiner holds, standing beside them (--ab).
+aud-regrab: a heavy part off the host's car, taken by the host and picked up again by the joiner at once: no fall through the ground.
 aud-part-lost: --part-members 0 runs the refetch without giving what hung on the part back to its car (before v0.69.2).
 --only skips the monkey unless --monkey is there too. --slow waits the old fixed times instead of until the machines agree.
 --ab adds the census scenarios' round with the check off (40 s each: proves the gap stays without it; --slow has it too).
@@ -996,6 +997,39 @@ def scripted(h, L, car, tracked, cars):
             if L.held(): L.s("dropheld")
             beside(h, h.ent(car)); time.sleep(1)
         h.s(f"set {T_}.HostGrabLetGo True")
+    if want("aud-regrab"):
+        # black box 11-10 (Car07Engine): the joiner took the engine off the host's car and let it go in it, the host claimed it
+        # (CargoRelease), the joiner picked it up again 1.2 s later; 1 s after that it sank on the joiner, then fell 300 m
+        print("\n=== a heavy part picked up again right after the host took it: does it stay above the ground?", flush=True)
+        beside(h, h.ent(car)); beside(L, L.ent(car), (-2.6, 0, 0)); time.sleep(1)
+        h.s(f"mp claim {car}"); wait(3, lambda: not h.ents()[car]["proxy"])
+        for order, delay in (("in the car", 1.2), ("let go", 1.2), ("in hand", 1.2), ("in the car", 0.3)):
+            heavy = [m for m in bolted(h, car) + glued(h, car) if m["i"] > 0 and any(w in m["name"] for w in ("Engine", "Motor", "Gearbox", "Door", "Hood"))]
+            heavy.sort(key=lambda m: "Engine" not in m["name"])
+            if not heavy: note("INVALID aud-regrab: no heavy part left on the car"); break
+            m = heavy[0]; known = set(L.ents())
+            L.act("detach", net=car, item=m["i"]); time.sleep(2)
+            part = next((k for k in L.ents() if k not in known), None)
+            if part is None: note(f"INVALID aud-regrab: {m['name']} didn't come off"); continue
+            tracked.add(part); y0 = L.me()["pos"][1] if isinstance(L.me(), dict) and "pos" in L.me() else L.ents()[part]["pos"][1]
+            # "in the car": left where it came off (in the engine bay), taken by the host there, pulled out by the joiner
+            print(f"     {m['name']} (net {part}) off, {order}, picked again after {delay} s:", str(L.s(f"mp holdnet {part}"))[:50] if order != "in the car" else "", flush=True); time.sleep(1.5)
+            if order == "let go": L.s("dropheld"); time.sleep(0.3)
+            h.s(f"mp claim {part}"); time.sleep(delay)
+            try: print("       joiner picks it again:", str(L.s(f"mp holdnet {part}"))[:60], flush=True)
+            except RuntimeError as e_: print("       joiner picks it again, refused:", str(e_)[-60:], flush=True)
+            time.sleep(1.5); L.s("dropheld") if L.held() else None
+            low = {"host": 1e9, "joiner": 1e9}
+            for _ in range(24):
+                for who, x in (("host", h), ("joiner", L)):
+                    r = x.ents().get(part)
+                    if r and not r.get("dormant"): low[who] = min(low[who], r["pos"][1])
+                time.sleep(0.25)
+            fell = {who: round(y0 - v, 1) for who, v in low.items() if v < 1e9}
+            print(f"       lowest below where it started: {fell} m (owner now {h.ents().get(part, {}).get('owner')})", flush=True)
+            for who, d in fell.items():
+                if d > 5: finding("aud-regrab", f"{m['name']} fell {d} m on the {who} after being picked up again ({order}, {delay} s)", part)
+            if L.held(): L.s("dropheld")
     if want("aud-world-break"):
         print("\n=== a piece of the world breaks while the joiner is far, or isn't in the game", flush=True)
         def cacti(p, name, at): return [b for b in p(f"mp breakables 12 {name}")["breakables"] if math.dist(b["pos"], at) < 1.0]
