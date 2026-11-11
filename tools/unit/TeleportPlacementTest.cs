@@ -121,6 +121,34 @@ static class TeleportPlacementTest
         Check(!Tpa.Holding(rb) && !rb.isKinematic, "re-TPA car restores dynamic mode after clear ring landing");
         Check(Math.Abs(car.transform.position.x) >= 4 || Math.Abs(car.transform.position.z) >= 4, "car searches beyond blocked pivot and small rings");
         Check(Math.Abs(car.transform.position.y - 1.4f) < .001, "car lowered to its floor before release");
+
+        // A hitched car and trailer are let go together (the RedPickup load, 2026-11-11): the car has ground, the
+        // trailer none yet, so both wait; once the trailer has ground, the car's unfreeze takes the trailer with it.
+        TLDRevamp.Fixes.UnfreezeOnGround.Enabled = true;
+        var prefix = typeof(TLDRevamp.Fixes.UnfreezeOnGround).GetMethod("Prefix", BindingFlags.Static | BindingFlags.NonPublic);
+        var pickup = new tosaveitemscript { car = new object() };
+        pickup.RB = new Rigidbody { transform = pickup.transform, isKinematic = true };
+        var trailer = new tosaveitemscript();
+        trailer.RB = new Rigidbody { transform = trailer.transform, isKinematic = true };
+        trailer.transform.position = new Vector3(0, 0, -6);
+        trailer.attachable = new attachablescript { utanfuto = new object(), attached = true, point = pickup.transform };
+        trailer.Unfrozen = () => trailer.RB.isKinematic = false;
+        TLDRevamp.Fixes.TrailerGrip.All.Add(new attachgripscript { Grip = new object(), tosaveitem = trailer });
+        var ground = new Collider();
+        Physics.Hits = p => p.z > -3 ? new[] { new RaycastHit { collider = ground, point = new Vector3(0, 0, 0), distance = .5f } } : Array.Empty<RaycastHit>();
+        Check(!(bool)prefix.Invoke(null, new object[] { pickup }) && pickup.RB.isKinematic, "a car waits for the trailer hitched to it");
+        Check(!(bool)prefix.Invoke(null, new object[] { trailer }) && trailer.RB.isKinematic, "the trailer waits for its own ground");
+        Physics.Hits = p => new[] { new RaycastHit { collider = ground, point = new Vector3(0, 0, 0), distance = .5f } };
+        Check((bool)prefix.Invoke(null, new object[] { pickup }) && !trailer.RB.isKinematic, "the car's unfreeze lets its trailer go in the same call");
+        TLDRevamp.Fixes.UnfreezeOnGround.HitchPairs = false;
+        trailer.RB.isKinematic = true; pickup.RB.isKinematic = true;
+        Physics.Hits = p => p.z > -3 ? new[] { new RaycastHit { collider = ground, point = new Vector3(0, 0, 0), distance = .5f } } : Array.Empty<RaycastHit>();
+        Check((bool)prefix.Invoke(null, new object[] { pickup }) && trailer.RB.isKinematic, "A/B: HitchPairs off lets the car go alone (before)");
+        TLDRevamp.Fixes.UnfreezeOnGround.HitchPairs = true;
+        TLDRevamp.Fixes.LoadFreeze.Holding = true; pickup.RB.isKinematic = true;
+        Physics.Hits = p => new[] { new RaycastHit { collider = ground, point = new Vector3(0, 0, 0), distance = .5f } };
+        Check(!(bool)prefix.Invoke(null, new object[] { pickup }), "nothing is let go while a world is loading");
+        TLDRevamp.Fixes.LoadFreeze.Holding = false;
         Console.WriteLine($"Teleport placement: {checks} checks passed");
     }
 }
@@ -230,10 +258,12 @@ public class Item : Component
 {
     public Item() { transform = new Transform { Item = this }; }
     public object car; public attachablescript attachable; public Rigidbody RB; public bool buried, ProxyReady = true;
-    public void DistUnFreezeRB() { }
+    public Action Unfrozen;   // what the game's DistUnFreezeRB does, where a check needs it
+    public void DistUnFreezeRB() { Unfrozen?.Invoke(); }
 }
 }
-public class attachablescript { public object utanfuto; }
+public class attachablescript { public object utanfuto; public bool attached; public UnityEngine.Transform point; }
+public class attachgripscript { public object Grip; public tosaveitemscript tosaveitem; }
 public class seatscript : Component { public tosaveitemscript tosave; }
 public class pickupable : Component { }
 public class fpscontroller : Component
@@ -282,6 +312,11 @@ namespace TLDRevamp
     public static class RevampSettings { public static void Save() { } }
     public static class Json { public static string Str(string s) => s; }
     public static class Plugin { public static Logger Log = new Logger(); public class Logger { public void LogWarning(string s) { } } }
+}
+namespace TLDRevamp.Fixes
+{
+    public static class LoadFreeze { internal static bool Holding; }
+    public static class TrailerGrip { public static readonly List<attachgripscript> All = new List<attachgripscript>(); }
 }
 namespace TLDRevamp.Net
 {

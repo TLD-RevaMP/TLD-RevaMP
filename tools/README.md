@@ -382,6 +382,11 @@ synthetic headers; tests also create report zips and corrupt inputs in temporary
   copy 70 m away, stays on the ground, whether it came off before or after the car's parts' colliders went off (`--old`:
   the collider LOD switches its colliders off with the car's, as before). `--bot`: one game, a player bot takes the car
   (the first case only; old: the wheel fell to -326 m, new: stays on the ground).
+- `tools/loadfreeze.py SAVEDIR NAME` (one game, a copy of a save): what its cars, trailers and trailer grips do in the
+  first seconds after the load (`Fixes.LoadWatch`: top speed, when let go, `--trace` frame by frame), `--ab` with the
+  load freeze (`Fixes.LoadFreeze`) and hitched pairs (`UnfreezeOnGround.HitchPairs`) off first. A pickup with a car
+  trailer hitched: off, the grip 113 m/s, the trailer 101, the pickup 67; on, all under 0.3 m/s. `--newgame SEED` for
+  a new world, `--set PATH=VALUE` for other switches.
 - `tools/cinematic.py check` drives the cinematic camera (issue #36) through the bridge and proves, from the game's
   own values, that the gameplay cameras and the player did not move while the camera was on, that the speed, the
   field of view and the orbit radius are clamped, and that the cursor is given back. `cinematic.py shot <file>` loads

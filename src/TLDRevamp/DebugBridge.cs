@@ -1309,6 +1309,9 @@ namespace TLDRevamp
                 case "poigens": return Fixes.PoiItemsStore.Gens();
                 case "poistore": return Fixes.PoiItemsStore.Stats;
                 case "unfreezeground": return Fixes.UnfreezeOnGround.Stats;
+                case "loadwatch": return Fixes.LoadWatch.Stats();
+                case "loadfreeze": return Fixes.LoadFreeze.Stats;
+                case "loadtrace": return "{\"trace\":" + Json.Str(Fixes.LoadWatch.TraceText) + "}";
                 case "terrainkeep": return Fixes.TerrainRestartKeep.Stats();
                 case "attachlog": return Diagnostics.AttachLog.Stats;
                 case "streamrace": return Fixes.StreamRace.Probe(arg);

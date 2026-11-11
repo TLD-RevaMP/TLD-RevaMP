@@ -386,7 +386,7 @@ namespace TLDRevamp
             DebugV2.DrawEditor();    // every event (its clicks and drags), drawn over the panels it frames
         }
 
-        private void FixedUpdate() { Net.Entities.FixedTick(); ModHost.FixedTick(); DebugBridge.FixedTick(); Fixes.DrivingAssists.FixedTick(); Net.JoinLoading.FixedTick(); }
+        private void FixedUpdate() { Net.Entities.FixedTick(); ModHost.FixedTick(); DebugBridge.FixedTick(); Fixes.DrivingAssists.FixedTick(); Net.JoinLoading.FixedTick(); Fixes.LoadFreeze.FixedTick(); }
         private void LateUpdate() { Net.Entities.WornLate(); Net.Entities.LateSample(); }
 
         private void OnApplicationQuit() => Net.JoinLoading.End("quit");
