@@ -342,6 +342,9 @@ namespace TLDRevamp
             if (!_loggedUpdate) { _loggedUpdate = true; Plugin.Log.LogInfo("Runner: first Update"); }
 
             var p = Plugin.Instance;
+            // each block on its own: one throw cut short the rest of Update — the network tick, the join screen, the keys
+            // (the cinematic camera did once, every frame it was on)
+            try {
             ScriptProfiler.FrameEnd(); // closes the frame window before telemetry samples it
             p.Telemetry.Tick();
             p.Bridge?.PumpMainThread();
@@ -349,17 +352,23 @@ namespace TLDRevamp
             Fixes.Sandstorms.Tick();
             Fixes.Rabbits.Tick();
             Fixes.GrassCameraThrottle.Tick(); Fixes.IdleTextureStreaming.Tick(); Fixes.PartConditionIdle.Tick(); Fixes.FarItemLookup.Tick(); Fixes.RenderOptions.Tick();
+            } catch (Exception e) { Fault(0, "fixes", e); }
+            try {
             if (Plugin.KeyDown(Plugin.KeyReplayRecord)) Replay.ReplayRecorder.Toggle();
             if (Plugin.KeyDown(Plugin.KeyReplayPlay)) { if (Replay.ReplayViewer.Active) Replay.ReplayViewer.End("closed"); else Replay.ReplayViewer.PlayLatest(); }
             Replay.ReplayRecorder.Tick();
             Replay.ReplayViewer.Tick();   // before the camera, so the camera shows this frame's pose
             Cinematic.CinematicCamera.Tick();
             if (Plugin.KeyDown(Plugin.KeyCinematic) && Cinematic.CinematicCamera.KeyAllowed()) Cinematic.CinematicCamera.Toggle();
-            Fixes.TerrainHorizon.Tick(); Fixes.OpenXrBridge.Tick(); Fixes.VrContractBridge.Tick(); MpLab.Tick(); Net.NetLab.Tick(); Net.Mp.Tick(); Net.PlayerSave.Tick(); Net.Tpa.Tick(); Net.Voice.Tick(); Net.Chat.Tick(); Net.VehicleLab.Tick(); Net.StreamLab.Tick();
-            Fixes.TinyRendererCull.Tick(); WorldGenLab.AllocTick(); RenderLab.Tick(); RebaseLab.Tick(); Fixes.RebaseParticles.Tick(); Net.DedicatedServer.Tick();
-            ModHost.Tick();
-            WorldGen.NewGameLayout.Tick();
-            KeyBindings.Tick(); DebugV2.Tick(); ItemHealth.Tick();
+            } catch (Exception e) { Fault(1, "replay/camera", e); }
+            try { Fixes.TerrainHorizon.Tick(); Fixes.OpenXrBridge.Tick(); Fixes.VrContractBridge.Tick(); MpLab.Tick(); Net.NetLab.Tick(); } catch (Exception e) { Fault(2, "terrain/vr/labs", e); }
+            try { Net.Mp.Tick(); } catch (Exception e) { Fault(3, "multiplayer", e); }
+            try { Net.PlayerSave.Tick(); Net.Tpa.Tick(); } catch (Exception e) { Fault(4, "player save/tpa", e); }
+            try { Net.Voice.Tick(); Net.Chat.Tick(); } catch (Exception e) { Fault(5, "voice/chat", e); }
+            try { Net.VehicleLab.Tick(); Net.StreamLab.Tick(); Fixes.TinyRendererCull.Tick(); WorldGenLab.AllocTick(); RenderLab.Tick(); RebaseLab.Tick(); Fixes.RebaseParticles.Tick(); Net.DedicatedServer.Tick(); } catch (Exception e) { Fault(6, "labs/cull/server", e); }
+            try { ModHost.Tick(); } catch (Exception e) { Fault(7, "mods", e); }
+            try { WorldGen.NewGameLayout.Tick(); KeyBindings.Tick(); DebugV2.Tick(); ItemHealth.Tick(); } catch (Exception e) { Fault(8, "menus/keys/debug", e); }
+            try {
             if (Plugin.KeyDown(Plugin.KeyOverlay)) { p.Overlay.Visible = !p.Overlay.Visible; RevampSettings.Save(); } // same setting as the Revamp tab
             if (Plugin.KeyDown(Plugin.KeyItemTraffic)) { Net.ItemTraffic.SetVisible(!Net.ItemTraffic.Show); RevampSettings.Save(); p.Overlay.Toast(Net.ItemTraffic.Show ? "Item traffic on" : "Item traffic off", 2f); }
             if (Plugin.KeyDown(Plugin.KeyOwnership)) { WorldOverlays.Ownership = !WorldOverlays.Ownership; RevampSettings.Save(); }
@@ -381,9 +390,22 @@ namespace TLDRevamp
             MarkPanel.Tick();
             p.Feedback.Tick();
             Net.Reports.Tick();
-            Net.ModCatalog.Tick();
-            Net.JoinLoading.Tick();
+            } catch (Exception e) { Fault(9, "keys/panels/reports", e); }
+            try { Net.ModCatalog.Tick(); } catch (Exception e) { Fault(10, "mod catalog", e); }
+            try { Net.JoinLoading.Tick(); } catch (Exception e) { Fault(11, "join screen", e); }
             if (Plugin.KeyDown(Plugin.KeyMpScreen)) Net.MpScreen.Toggle();   // the multiplayer screen (also the game's own Multiplayer button)
+        }
+
+        private static readonly float[] _faultLogAt = new float[16];
+        public static long Faults;
+        /// A block of Update/FixedUpdate threw: logged at most every 10 s per block, the rest of the frame goes on.
+        private static void Fault(int slot, string what, Exception e)
+        {
+            Faults++;
+            float now = Time.realtimeSinceStartup;
+            if (now - _faultLogAt[slot] < 10f) return;
+            _faultLogAt[slot] = now;
+            Plugin.Log.LogError("Runner " + what + ": " + e);
         }
 
         private void OnGUI()
@@ -408,7 +430,12 @@ namespace TLDRevamp
             DebugV2.DrawEditor();    // every event (its clicks and drags), drawn over the panels it frames
         }
 
-        private void FixedUpdate() { Net.Entities.FixedTick(); ModHost.FixedTick(); DebugBridge.FixedTick(); Fixes.DrivingAssists.FixedTick(); Net.JoinLoading.FixedTick(); Fixes.LoadFreeze.FixedTick(); }
+        private void FixedUpdate()
+        {
+            try { Net.Entities.FixedTick(); } catch (Exception e) { Fault(12, "entities fixed", e); }
+            try { ModHost.FixedTick(); DebugBridge.FixedTick(); } catch (Exception e) { Fault(13, "mods/bridge fixed", e); }
+            try { Fixes.DrivingAssists.FixedTick(); Net.JoinLoading.FixedTick(); Fixes.LoadFreeze.FixedTick(); } catch (Exception e) { Fault(14, "assists/join/load fixed", e); }
+        }
         private void LateUpdate() { Net.Entities.WornLate(); Net.Entities.LateSample(); }
 
         private void OnApplicationQuit() => Net.JoinLoading.End("quit");
