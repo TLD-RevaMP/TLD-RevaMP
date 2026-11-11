@@ -768,7 +768,7 @@ namespace TLDRevamp.Fixes
                     {
                         var gen = FarQueue[0].Key;
                         var key = FarQueue[0].Value;
-                        if (gen == null || gen.terrains == null || !gen.terrains.TryGetValue(key, out var tile) || tile == null || tile.mf == null || tile.mf.mesh == null)
+                        if (gen == null || gen.terrains == null || !gen.terrains.TryGetValue(key, out var tile) || tile == null || tile.mf == null || tile.mf.sharedMesh == null)
                         { FarQueue.RemoveAt(0); continue; }
                         double spacing = TileSpacing(gen), blend = BlendRadius(spacing), half = gen.tileSize * 0.5 + spacing;
                         var roads = new List<roadGenScript.roadClass>();
@@ -782,7 +782,7 @@ namespace TLDRevamp.Fixes
                         }
                         if (!ready) { PureFarWaits++; break; }   // its roads go on being made next frame
                         FarQueue.RemoveAt(0);
-                        AlignTileTo(tile.mf.mesh, key, roads, blend);
+                        AlignTileTo(tile.mf.sharedMesh, key, roads, blend);
                         PureFarDone++;
                     }
                 }
@@ -915,8 +915,19 @@ namespace TLDRevamp.Fixes
         /// The original heights of one mesh, so the fix can be undone and repeated safely.
         private static readonly Dictionary<Mesh, TerrainHorizonGeometry.HeightFix> Fixes = new Dictionary<Mesh, TerrainHorizonGeometry.HeightFix>();
 
+        private static int _fixesPruneAt = 512;
+        private static readonly List<Mesh> _fixesGone = new List<Mesh>();
         private static TerrainHorizonGeometry.HeightFix FixFor(Mesh mesh)
         {
+            // one entry per distant tile corrected, never let go: the tiles' meshes destroyed long ago kept their heights
+            if (Fixes.Count >= _fixesPruneAt)
+            {
+                _fixesGone.Clear();
+                foreach (var k in Fixes.Keys) if (k == null) _fixesGone.Add(k);
+                foreach (var k in _fixesGone) Fixes.Remove(k);
+                _fixesGone.Clear();
+                _fixesPruneAt = Fixes.Count + 512;
+            }
             if (!Fixes.TryGetValue(mesh, out var fix))
             {
                 fix = new TerrainHorizonGeometry.HeightFix(mesh.vertexCount);
@@ -982,8 +993,11 @@ namespace TLDRevamp.Fixes
                     return;
                 }
                 var tile = TerrainRef(__instance);
-                if (tile == null || tile.mf == null || tile.mf.mesh == null) return;
-                var mesh = tile.mf.mesh;
+                // sharedMesh: the tile's own (terrainGenScript.MeshFromSmesh makes one per tile). Reading .mesh made Unity
+                // copy it and orphan the original: the game's OnDestroy destroys only the copy, so every distant tile
+                // placed leaked one mesh, ~100 per km driven per player, for the whole session
+                if (tile == null || tile.mf == null || tile.mf.sharedMesh == null) return;
+                var mesh = tile.mf.sharedMesh;
                 // The tile's own transform: the mesh's vertices are local to the tile object.
                 var tr = tile.t != null ? tile.t : tile.transform;
                 // The tile's own vertex spacing: a 690 m tile with a resolution of 7 has a vertex
