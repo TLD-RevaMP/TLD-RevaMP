@@ -295,7 +295,9 @@ namespace TLDRevamp.Net
         {
             if (!InSession) return "{\"error\":\"not in a session\"}";
             if (root == null) return "{\"error\":\"nothing\"}";
-            foreach (var e0 in ByNet.Values) if (ReferenceEquals(e0.Root, root) || (e0.RootId != 0 && e0.RootId == root.idInSave && ReferenceEquals(e0.Root, null))) return "{\"already\":" + e0.NetId + "}";
+            // by reference only: a stored-away object's RootId can equal a new item's idInSave on a joiner (the host's ids
+            // and the joiner's own counter), and the new item was never shared (stackcargo, 2026-11-11)
+            foreach (var e0 in ByNet.Values) if (ReferenceEquals(e0.Root, root)) return "{\"already\":" + e0.NetId + "}";
             if (PendingShare.ContainsKey(root.idInSave)) return "{\"pending\":true}";
             RabbitBeforeShare(root);
             var items = group ?? ItemSnapshot.Group(root);
