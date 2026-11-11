@@ -6,7 +6,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GAME="${TLD_DIR:-$HOME/.local/share/Steam/steamapps/common/The Long Drive}"
 VER=$(grep -oP 'Version = "\K[^"]+' "$ROOT/src/TLDRevamp/Plugin.cs")
-dotnet build "$ROOT/src/TLDRevamp/TLDRevamp.csproj" -c Release -nologo -v q | grep -E "error|Build succeeded" | sort -u
+# the player edition (TLDRevamp.PlayerEdition): a release for players, without the developer settings, keys and overlays
+dotnet build "$ROOT/src/TLDRevamp/TLDRevamp.csproj" -c Release -nologo -v q -p:RevampEdition=player | grep -E "error|Build succeeded" | sort -u
 dotnet build "$ROOT/src/TLDLoaderShim/TLDLoaderShim.csproj" -c Release -nologo -v q | grep -E "error|Build succeeded" | sort -u
 # The preloader is copied into the package, so it has to be BUILT here: without this the copy either
 # fails (clean machine) or ships whatever stale artefact happened to be lying in bin/ (that is how the

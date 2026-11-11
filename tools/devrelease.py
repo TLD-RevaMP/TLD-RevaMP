@@ -46,11 +46,12 @@ def private_hits(data):
     return [s for s in found if rx.search(s)]
 
 
-def build(base, version):
-    """The version is metadata, so a dev release remains a clean build of its commit."""
+def build(base, version, edition=None):
+    """The version is metadata, so a dev release remains a clean build of its commit. edition "player": a release for
+    players (TLDRevamp.PlayerEdition); a dev build has none."""
     for proj in ("TLDRevamp/TLDRevamp.csproj", "TLDLoaderShim/TLDLoaderShim.csproj"):
         subprocess.run(["dotnet", "build", str(ROOT / "src" / proj), "-c", "Release", "-nologo", "-v", "q",
-                        "-p:RevampVersion=" + version], check=True)
+                        "-p:RevampVersion=" + version] + (["-p:RevampEdition=" + edition] if edition else []), check=True)
 
 
 

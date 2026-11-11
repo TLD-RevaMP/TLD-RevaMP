@@ -32,6 +32,8 @@ namespace TLDRevamp
         }
         public const string BaseVersion = "0.69.1";
         public static readonly string Version = Metadata("RevampVersion", BaseVersion);
+        /// Built with -p:RevampEdition=player (a release for players): PlayerEdition.
+        public static readonly bool IsPlayerEdition = Metadata("RevampEdition", "") == "player";
         public static readonly string BuildCommit = Metadata("SourceCommit", "unknown");
         public static readonly bool BuildDirty = Metadata("SourceDirty", "true") != "false";
         public static string CommitLabel => (BuildCommit.Length == 40 ? BuildCommit.Substring(0, 7) : "unknown") + (BuildDirty ? "+changes" : "");
@@ -151,7 +153,7 @@ namespace TLDRevamp
             // The bridge runs any command it's sent (reflection included): developer test tooling only, off unless this
             // machine's config turns it on (the test machines do; a player's install never does).
             BridgeEnabled = Config.Bind("Debug", "Bridge", false,
-                "Developer test tooling: a command port on 127.0.0.1:27050 for automated tests. Leave it off.").Value;
+                "Developer test tooling: a command port on 127.0.0.1:27050 for automated tests. Leave it off.").Value && !IsPlayerEdition;
             // The XR session (issue #41). OpenXR is what the game ships and what it uses; the bridge only owns the
             // loader's life when the session is asked for. The no-pre-init loader is a deliberate fallback and is off
             // by default: the plain loader is the one the game expects.
@@ -163,6 +165,8 @@ namespace TLDRevamp
             var cl = Environment.GetCommandLineArgs();
             int ci = Array.IndexOf(cl, "-tldbridge");
             if (ci >= 0 && ci + 1 < cl.Length && int.TryParse(cl[ci + 1], out int bp) && bp > 1024 && bp < 65536) BridgePort = bp;
+            // a player edition ignores the config's Bridge; only an explicit -tldbridge on the command line (the test tools) starts it
+            if (IsPlayerEdition && ci >= 0) BridgeEnabled = true;
             ObjectTrail.On = BridgeEnabled;
             if (BridgeEnabled) { Bridge = new DebugBridge(BridgePort); Bridge.Start(); }
 
@@ -237,6 +241,7 @@ namespace TLDRevamp
             // The BepInEx manager object can be destroyed or disabled by the game, which silently stops
             // Update/OnGUI. Run the per-frame work from our own hidden, persistent object instead.
             RevampSettings.Load(); // player's saved choices from the settings menu's Revamp tab
+            PlayerEdition.Apply(KeyBindings.ByName());   // a player release: the developer things off (nothing in a dev build)
             WorldGen.Old2023.OldBuild.Probe();   // the 2023 game files for the old terrain (the player's own Steam download)
             if (!WorldGen.Old2023.OldBuild.Available && WorldGen.TerrainChoice.Selected == WorldGen.TerrainMode.OldTerrain)
                 WorldGen.TerrainChoice.Selected = WorldGen.TerrainModes.Default;   // the remembered pick comes back with the files

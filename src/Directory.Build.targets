@@ -18,6 +18,8 @@
       <AssemblyMetadata Include="SourceCommit" Value="$(_RevampCommit)" />
       <AssemblyMetadata Include="SourceDirty" Value="$(_RevampDirty)" />
       <AssemblyMetadata Include="RevampVersion" Value="$(RevampVersion)" Condition="'$(RevampVersion)' != ''" />
+      <!-- a release for players (tools/package.sh, previewrelease.py): TLDRevamp.PlayerEdition -->
+      <AssemblyMetadata Include="RevampEdition" Value="$(RevampEdition)" Condition="'$(RevampEdition)' != ''" />
     </ItemGroup>
   </Target>
 </Project>

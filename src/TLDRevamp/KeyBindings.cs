@@ -17,6 +17,13 @@ namespace TLDRevamp
     {
         private sealed class Bind { public string Name, Help; public ConfigEntry<KeyboardShortcut> Entry; }
         private static readonly List<Bind> All = new List<Bind>();
+        /// Every bound key by its name in the Keys section (PlayerEdition unbinds the developer ones).
+        internal static Dictionary<string, ConfigEntry<KeyboardShortcut>> ByName()
+        {
+            var d = new Dictionary<string, ConfigEntry<KeyboardShortcut>>();
+            foreach (var b in All) d[b.Name] = b.Entry;
+            return d;
+        }
         private static Bind _capturing;
         private static KeyCode _modifierAlone = KeyCode.None;
         private static int _swallowFrame = -1;

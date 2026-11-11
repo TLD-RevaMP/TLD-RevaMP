@@ -303,6 +303,13 @@ that the DLL's version string matches `src/TLDRevamp/Plugin.cs`, copies BepInEx 
 zip, writes `INSTALL.txt` with the version, ships the third-party licence texts, and refuses to build a zip that
 contains configs, logs, third-party mods, or personal strings in the DLLs.
 
+Releases for players are the **player edition** (`-p:RevampEdition=player`, `src/TLDRevamp/PlayerEdition.cs`): the same
+code with the developer things off. Settings → Revamp has no Debugging or Branding section, the developer keys are
+hidden and unbound, every debug overlay and the WIP mark are off, the background health, item and part watches don't
+run, and the config's debug bridge is ignored (only an explicit `-tldbridge` on the command line starts it, for the
+test tools). `tools/package.sh` and `tools/previewrelease.py` build it; `tools/build.sh` and `tools/devrelease.py`
+build the full dev edition.
+
 Other build and release steps:
 
 | Command | What it does |
@@ -313,6 +320,7 @@ Other build and release steps:
 | `tools/devrelease.py --dry-run` | builds the checked-out commit and zips it into `dist/`, nothing uploaded |
 | `tools/devrelease.py` | the same, uploaded as a draft GitHub release |
 | `tools/devrelease.py --public` | the same, uploaded as a public pre-release |
+| `tools/previewrelease.py --version 0.69.2-preview.1 --title ... --notes notes.md [--dry-run]` | a preview for players: the player edition, player-written notes, a draft pre-release (`--public` publishes it) |
 
 A dev build is a **draft** release by default: only people with write access see and download it, and its tag
 `v<version>-dev.<commit>` only appears if someone publishes it. The installers stay pinned to their release; a dev
