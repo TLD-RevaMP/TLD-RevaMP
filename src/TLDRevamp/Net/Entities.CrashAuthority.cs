@@ -86,9 +86,16 @@ namespace TLDRevamp.Net
         }
 
         /// CopyContact: a hard contact between a physical copy and a car simulated here.
+        /// A car towing a trailer stays its owner's in a crash: the takeover cascades to the trailer (CascadeHitches), which
+        /// took the trailer's joint off and froze it mid-crash, put it back, and did it all again on the return 1-3 s
+        /// later. The other car shoves its copy as against any copy. A/B: false = taken as any car (before).
+        public static bool CrashSkipTowing = true;
+        public static long CrashTowingSkipped;
+
         internal static bool TryTakeCrash(Ent e, Rigidbody mine, float relSpeed)
         {
             if (HitchTrailer(e)) return false;
+            if (CrashSkipTowing && e.Root != null && e.Root.car != null && Fixes.UnfreezeOnGround.Partners(e.Root).Count > 0) { CrashTowingSkipped++; return false; }
             if (!CrashAuthority || !e.Proxy || relSpeed < CrashMinRelMps || e.CrashTaking) return false;
             foreach (var h in _held) if (h.E == e) return false;
             if (CrashRetakeApart && WaitingApart(e)) { CrashRetakesSkipped++; return false; }   // still against what it hit last time
