@@ -17,7 +17,9 @@ def method(name, result='void'):
 
 
 assert '                TickPoseLock(e);' in source, 'loaded proxies must check the game lock every tick'
-assert 'e.ReceivedStateEpoch == e.Epoch && LockedWorld(e,' in source, 'dormant locks must respect the epoch'
+# the dormant pass lives with the placed objects since 84b80c7 (Entities.Placed.cs: DormantTick)
+placed = (Path(__file__).resolve().parents[2] / 'src/TLDRevamp/Net/Entities.Placed.cs').read_text(encoding='utf-8')
+assert 'e.ReceivedStateEpoch == e.Epoch && LockedWorld(e,' in placed, 'dormant locks must respect the epoch'
 target = Path(sys.argv[1])
 target.parent.mkdir(parents=True, exist_ok=True)
 roles = method('SetProxy') + '\n' + method('ApplyProxyBodies')

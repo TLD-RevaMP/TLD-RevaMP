@@ -46,8 +46,25 @@ static class PatchTargetTest
         {
             try { var o = other.GetType(name); if (o != null) return o; } catch { }
         }
+        // a short name from another assembly's namespace the source imports (TMP_Dropdown, `using TMPro;`): when exactly
+        // one type of the other assemblies has it
+        if (name.IndexOf('.') < 0)
+        {
+            if (OtherShort == null)
+            {
+                OtherShort = new Dictionary<string, Type>(StringComparer.Ordinal); var twice = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var other in Others)
+                {
+                    Type[] ts; try { ts = other.GetTypes(); } catch (ReflectionTypeLoadException e) { ts = e.Types; } catch { continue; }
+                    foreach (var x in ts) { if (x == null || !x.IsPublic) continue; if (!OtherShort.TryAdd(x.Name, x)) twice.Add(x.Name); }
+                }
+                foreach (var n in twice) OtherShort.Remove(n);
+            }
+            if (OtherShort.TryGetValue(name, out var only)) return only;
+        }
         return null;
     }
+    static Dictionary<string, Type> OtherShort;
 
     /// The game's other assemblies in lib/ (Unity's modules and packages), asked by full name only.
     static readonly List<Assembly> Others = new List<Assembly>();

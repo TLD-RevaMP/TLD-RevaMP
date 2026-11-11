@@ -5,6 +5,7 @@
     <Compile Include="../../src/TLDRevamp/OverlayStyle.cs" />
     <Compile Include="../../src/TLDRevamp/CompactOverlay.cs" />
     <Compile Include="OverlayGuiStubs.cs" />
+    <Compile Include="DebugV2Stubs.cs" />
     <Compile Include="IdleTrafficTest.cs" />
     <Compile Include="LiveRabbitTrafficTest.cs" />
     <Compile Include="PickupRaceTest.cs" />

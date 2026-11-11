@@ -346,9 +346,10 @@ namespace UnityEngine
             }
         }
     }
-    public struct Bounds { public Vector3 center, extents; public Bounds(Vector3 c, Vector3 size) { center = c; extents = size * .5f; } }
+    public struct Bounds { public Vector3 center, extents; public Bounds(Vector3 c, Vector3 size) { center = c; extents = size * .5f; } public Vector3 max => center + extents; }
     public class Collider { public Bounds bounds; }
-    public class Renderer { public Bounds bounds; }
+    public class Renderer { public Bounds bounds; public bool enabled = true; }
+    public class ParticleSystemRenderer : Renderer { }
     public class Camera
     {
         public Transform transform = new Transform(); public bool isActiveAndEnabled = true; public float nearClipPlane = .1f;

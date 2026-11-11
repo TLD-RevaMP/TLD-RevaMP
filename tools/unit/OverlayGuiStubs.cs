@@ -8,6 +8,10 @@ namespace UnityEngine
         public float R => r; public float G => g;
         public Color(float r, float g, float b, float a = 1) { this.r = r; this.g = g; this.b = b; this.a = a; }
         public static Color white => new Color(1, 1, 1);
+        public static bool operator ==(Color a, Color b) => a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
+        public static bool operator !=(Color a, Color b) => !(a == b);
+        public override bool Equals(object o) => o is Color c && c == this;
+        public override int GetHashCode() => (r, g, b, a).GetHashCode();
         public static Color Lerp(Color a, Color b, float t) => new Color(a.r + (b.r-a.r)*t, a.g + (b.g-a.g)*t, a.b + (b.b-a.b)*t, a.a + (b.a-a.a)*t);
     }
     public struct Vector2
