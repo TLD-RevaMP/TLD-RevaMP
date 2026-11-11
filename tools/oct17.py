@@ -18,7 +18,7 @@ the road), one run:
 import sys, os, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
-from mplib import Agent, ensure_both, seeded_both, join_both, relay_both
+from mplib import Agent, ensure_both, seeded_both, join_both, relay_both, join_cmd
 from roadkit import g, car_ready, clear_road
 
 os.environ.setdefault("TLD_TEST_MODS", "CarTrailer,HeadUnit")   # the example mods stay installed
@@ -164,7 +164,7 @@ with game.ProtectedSession():
         # ---- I: a forged identity, then the real one
         sid_l = L("net me")["steamId"]; ir0 = num(h, "TLDRevamp.Net.MpServer.IdentityRefused")
         L(f"set TLDRevamp.Net.MpClient.TestClaimSteamId {int(sid_l) + 1}")
-        L(f"mp joinid {h('net me')['steamId']}")
+        L(join_cmd(h))
         refused = until(lambda: num(h, "TLDRevamp.Net.MpServer.IdentityRefused") > ir0, 40)
         time.sleep(2)
         st = L("mp status").get("client") or {}

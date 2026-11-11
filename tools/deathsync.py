@@ -87,7 +87,17 @@ try:
                         time.sleep(.25)
                         st = b(f"mp ragdoll {ragnet}")
                         if st.get("limbs"): samples.append(tuple(st["limbs"]))
-                    verdict("CORPSE LIMBS STREAM", len(samples) >= 3 and len({str(x) for x in samples}) > 1, f"{len(samples)} samples")
+                    moving = len({str(x) for x in samples}) > 1
+                    # settled before the samples (it happens: the corpse search can take seconds): then the host's copy must
+                    # lie where the joiner's corpse lies, limb by limb (it failed only on a still corpse, on both builds)
+                    gap = None
+                    if samples and not moving:
+                        try:
+                            mine = L(f"mp ragdoll {ragnet}").get("limbs") or []
+                            gap = max(math.dist(a[:3], b_[:3]) for a, b_ in zip(samples[-1], mine) if a and b_)
+                        except Exception as e_: print("    joiner's limbs:", str(e_)[:80], flush=True)
+                    verdict("CORPSE LIMBS STREAM", len(samples) >= 3 and (moving or (gap is not None and gap < 0.3)),
+                            f"{len(samples)} samples, " + ("moving" if moving else f"at rest, farthest limb {gap if gap is None else round(gap, 2)} m from the joiner's"))
             else:
                 verdict("CORPSE SHARE DISABLED PATH", True, f"found local/world corpse entity {ragnet}" if ragnet is not None else "no corpse assertion")
             dead_at = anchor_xyz

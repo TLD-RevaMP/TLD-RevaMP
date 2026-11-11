@@ -15,7 +15,7 @@ import sys, time, pathlib, subprocess, hashlib, zipfile, glob
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game, bench
 import tldenv
-from mplib import Agent, ensure_both, seeded_both, relay_both, REMOTE_HOST, local_build_hash, running_build
+from mplib import Agent, ensure_both, seeded_both, relay_both, REMOTE_HOST, local_build_hash, running_build, join_cmd
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 def arg(n, d): return sys.argv[sys.argv.index(n) + 1] if n in sys.argv else d
@@ -46,7 +46,7 @@ def laptop_restart():
 def join(h, L, wait_ask=90):
     """join; wait for a question or the end of the join. Returns (ask, client status)"""
     L("mp stop"); h("mp stop"); time.sleep(2)
-    h("mp host 27070"); L(f"mp joinid {h('net me')['steamId']}")
+    h("mp host 27070"); L(join_cmd(h))
     t0 = time.time()
     while time.time() - t0 < wait_ask:
         a = L("mp ask")

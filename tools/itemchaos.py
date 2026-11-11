@@ -24,7 +24,7 @@ or the --trail N,M ones). --verbose prints it all. The folder can hold private t
 import sys, os, time, math, json, random, re, shutil, pathlib, traceback
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
-from mplib import Agent, ensure_both, join_both, trail, DESKTOP_IP
+from mplib import Agent, ensure_both, join_both, trail, DESKTOP_IP, join_cmd
 from roadkit import until
 
 # where a run's time goes: seconds slept per line of this file (other files by name), printed at the end
@@ -384,7 +384,7 @@ def doorcase(h, L, car, m, tracked, cars):
 
 def rejoin_joiner(h, L):
     L("mp stop"); note("joiner left"); time.sleep(6)
-    L(f"mp joinid {h('net me')['steamId']}") if RELAY else L(f"mp join {DESKTOP_IP}:27070")
+    L(join_cmd(h)) if RELAY else L(f"mp join {DESKTOP_IP}:27070")
     until(lambda: L("mp status")["client"]["ready"], 120); note("joiner back"); time.sleep(10)
     L("set TLDRevamp.ReproPlayback.Active True"); L("set kaposztaleves.s.settings.god True")
 
@@ -804,7 +804,7 @@ def scripted(h, L, car, tracked, cars):
             L.s(f"set {PS}.TestRestoreDrop {drop}")
             L("mp stop"); time.sleep(6)
             before = L.s(f"get {PS}.ItemsRestored").get("value")
-            L(f"mp joinid {h('net me')['steamId']}") if RELAY else L(f"mp join {DESKTOP_IP}:27070")
+            L(join_cmd(h)) if RELAY else L(f"mp join {DESKTOP_IP}:27070")
             until(lambda: L("mp status")["client"]["ready"], 120); time.sleep(4)
             L("set TLDRevamp.ReproPlayback.Active True"); L("set kaposztaleves.s.settings.god True")
             return L.s(f"get {PS}.ItemsRestored").get("value") - before
@@ -895,7 +895,7 @@ def scripted(h, L, car, tracked, cars):
             at = h.ents()[rab]["pos"]; L(f"tpground {at[0] + 1500} {at[2]}"); time.sleep(5)
             if how == "late": L("mp stop"); time.sleep(5)
             def rejoin():
-                L(f"mp joinid {h('net me')['steamId']}") if RELAY else L(f"mp join {DESKTOP_IP}:27070")
+                L(join_cmd(h)) if RELAY else L(f"mp join {DESKTOP_IP}:27070")
                 until(lambda: L("mp status")["client"]["ready"], 120)
                 L("set TLDRevamp.ReproPlayback.Active True"); L("set kaposztaleves.s.settings.god True")
             try: killed = h.s(f"mp breakent {rab} 100000")
@@ -1754,7 +1754,7 @@ def scripted(h, L, car, tracked, cars):
     if want("rejoin"):
         print("\n=== the joiner leaves and joins again (the owner of the car goes away)", flush=True)
         L("mp stop"); note("joiner left"); time.sleep(6)
-        L(f"mp joinid {h('net me')['steamId']}") if RELAY else L(f"mp join {DESKTOP_IP}:27070")
+        L(join_cmd(h)) if RELAY else L(f"mp join {DESKTOP_IP}:27070")
         until(lambda: L("mp status")["client"]["ready"], 120); note("joiner back"); time.sleep(10)
         L("set TLDRevamp.ReproPlayback.Active True"); L("set kaposztaleves.s.settings.god True")
         check(h, L, tracked, cars, "after the rejoin")

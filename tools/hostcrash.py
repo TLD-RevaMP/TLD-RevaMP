@@ -9,7 +9,7 @@ import sys, time, math, pathlib, subprocess
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game, launchguard
 import tldenv
-from mplib import Agent, ensure_both, seeded_both, REMOTE_HOST
+from mplib import Agent, ensure_both, seeded_both, REMOTE_HOST, join_cmd
 from roadkit import until, g, car_ready
 
 HANG = float(sys.argv[sys.argv.index("--hang") + 1]) if "--hang" in sys.argv else 0.0
@@ -33,7 +33,7 @@ with game.ProtectedSession():
     h = seeded_both(L)
     for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
-    h("mp host 27070"); L(f"mp joinid {h('net me')['steamId']}")
+    h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
     L("set TLDRevamp.TestSafety.BlockAutoSave True")
     shift_l = g(L, "settingsscript.s.S.BAutoShift"); god_l = g(L, "kaposztaleves.s.settings.god")

@@ -10,7 +10,7 @@
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
-from mplib import Agent, ensure_both, seeded_both
+from mplib import Agent, ensure_both, seeded_both, join_cmd
 
 RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"
 VERDICTS = []
@@ -39,7 +39,7 @@ with game.ProtectedSession():
     h(f"tpground {hp['gx'] + 15} {hp['gz']}"); time.sleep(3)   # out of the start building, on open ground
     hp = h("gpos"); L(f"tpground {hp['gx']} {hp['gz'] + 3}"); time.sleep(3)
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
-    h("mp host 27070"); L(f"mp joinid {h('net me')['steamId']}")
+    h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
     L("set TLDRevamp.TestSafety.BlockAutoSave True")
     gods = {}

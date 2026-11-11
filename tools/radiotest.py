@@ -9,7 +9,7 @@ Every station is a simulated broadcast (clip + time); each machine ran its own, 
 import sys, os, time, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
-from mplib import Agent, ensure_both, seeded_both
+from mplib import Agent, ensure_both, seeded_both, join_cmd
 
 RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"
 VERDICTS = []
@@ -51,7 +51,7 @@ with game.ProtectedSession():
     time.sleep(5)
     compare(h, L, "0 before the session (each machine its own broadcast)")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
-    h("mp host 27070"); L(f"mp joinid {h('net me')['steamId']}")
+    h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
     L("set TLDRevamp.TestSafety.BlockAutoSave True")
     try:

@@ -12,7 +12,7 @@ bot tests couldn't show — real latency, a real second game applying attaches/r
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
-from mplib import Agent, ensure_both, seeded_both
+from mplib import Agent, ensure_both, seeded_both, join_cmd
 
 RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"
 # --set A=v,... : TLDRevamp field values on both machines once joined; --old66: every v0.66.x fix off (A/B)
@@ -98,7 +98,7 @@ with game.ProtectedSession():
     h = seeded_both(L)
     for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
-    h("mp host 27070"); L(f"mp joinid {h('net me')['steamId']}")
+    h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
     L("set TLDRevamp.TestSafety.BlockAutoSave True")
     for k_, v_ in SETS:
@@ -502,7 +502,7 @@ with game.ProtectedSession():
             e9 = ents(h).get(l9)
             print(f"  host after the leave: lamp {e9 and {k: e9[k] for k in ('owner', 'proxy', 'pos', 'dormant')}}; {census(h, lp9)}", flush=True)
             verdict("9a THE LAMP STAYS IN THE WORLD WHEN ITS OWNER LEAVES, THE HOST'S", e9 is not None and e9["owner"] == 0 and not e9["proxy"], f"{e9 and e9['owner']}")
-            print("  laptop joins again:", L(f"mp joinid {h('net me')['steamId']}"), flush=True)
+            print("  laptop joins again:", L(join_cmd(h)), flush=True)
             rj = until(lambda: L("mp status")["client"]["ready"], 150)
             time.sleep(8)
             L(f"tpground {cp[0] + 6} {cp[2] - 6}"); time.sleep(6)
@@ -546,7 +546,7 @@ with game.ProtectedSession():
             print(f"  host after: {ee and {k: ee[k] for k in ('owner', 'proxy', 'pos')}} {pe}", flush=True)
             verdict("9e A LAMP HELD BY A LEAVING PLAYER BECOMES A NORMAL OBJECT ON THE HOST", ee is not None and ee["owner"] == 0 and not ee["proxy"] and pe.get("rb") and pe["rb"].get("det") and not pe["rb"].get("kin") and "0.0" in pe.get("under", "") or (pe.get("under", "").split(" at ")[-1].split(" ")[0] < "0.5"),
                     f"{pe}")
-            print("  laptop joins again:", L(f"mp joinid {h('net me')['steamId']}")["client"]["ready"], flush=True)
+            print("  laptop joins again:", L(join_cmd(h))["client"]["ready"], flush=True)
             until(lambda: L("mp status")["client"]["ready"], 150); time.sleep(8)
 
         if "9f" in ONLY or "9" in ONLY:
@@ -565,7 +565,7 @@ with game.ProtectedSession():
             print(f"  host after: owner {ef and ef['owner']} proxy {ef and ef['proxy']} moved {round(dist(ef['pos'], p0), 1) if ef else None} m; damage {car.get('damageMaxV')} spin {car.get('peakSpinDeg')} rise {car.get('riseM')} upY {car.get('endUpY')} parts lost {car.get('partsLost')}", flush=True)
             verdict("9f A CAR WHOSE DRIVER LEAVES MID-DRIVE IS THE HOST'S, ROLLS OUT, NOT HURT", ef is not None and ef["owner"] == 0 and not ef["proxy"] and dist(ef["pos"], p0) < 60 and (car.get("damageMaxV") or 0) < 10 and (car.get("partsLost") or 0) == 0,
                     f"moved {round(dist(ef['pos'], p0), 1) if ef else None} m, damage {car.get('damageMaxV')}, parts lost {car.get('partsLost')}")
-            print("  laptop joins again:", L(f"mp joinid {h('net me')['steamId']}")["client"]["ready"], flush=True)
+            print("  laptop joins again:", L(join_cmd(h))["client"]["ready"], flush=True)
             until(lambda: L("mp status")["client"]["ready"], 150); time.sleep(5)
 
         if "10" in ONLY:

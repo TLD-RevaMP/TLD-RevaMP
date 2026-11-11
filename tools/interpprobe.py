@@ -7,7 +7,7 @@ every 2 s: latency deviations over the least delayed state (ms), send gaps (ms),
 import sys, time, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game, tldenv
-from mplib import Agent, ensure_both, seeded_both, DESKTOP_IP
+from mplib import Agent, ensure_both, seeded_both, DESKTOP_IP, join_cmd
 
 RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"
 SECS = int(sys.argv[sys.argv.index("--secs") + 1]) if "--secs" in sys.argv else 12
@@ -53,7 +53,7 @@ with game.ProtectedSession():
         L("mp stop"); sys.exit(0)
     h("mp host 27070")
     if "--direct" in sys.argv: L(f"mp join {DESKTOP_IP}:27070")   # straight over the LAN: no Steam relay in the path
-    else: L(f"mp joinid {h('net me')['steamId']}")
+    else: L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
     L("set TLDRevamp.TestSafety.BlockAutoSave True")
     print("route:", L("net route"), flush=True)

@@ -8,7 +8,7 @@ sent / received, at rest). Nothing is moved by the test.
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
-from mplib import Agent, ensure_both, seeded_both
+from mplib import Agent, ensure_both, seeded_both, join_cmd
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
 RELAY, TOL = arg("--relay", "iad"), arg("--tol", 1.0, float)
@@ -50,7 +50,7 @@ with game.ProtectedSession():
     for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     try:
-        h("mp host 27070"); L(f"mp joinid {h('net me')['steamId']}")
+        h("mp host 27070"); L(join_cmd(h))
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafety.BlockAutoSave True")
         hp = h("gpos"); L(f"tpground {hp['gx'] + 4} {hp['gz'] - 6}")

@@ -6,7 +6,7 @@ standing on the ground, alive — not at the start, kilometres away. --start: th
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
-from mplib import Agent, ensure_both, seeded_both
+from mplib import Agent, ensure_both, seeded_both, join_cmd
 from roadkit import until, g, tp
 
 RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"
@@ -32,7 +32,7 @@ with game.ProtectedSession():
         hp = h("mp players")["me"]
         print(f"host at {hp}, {math.dist(hp[::2], start[::2]) / 1000:.1f} km from the start", flush=True)
         if "--start" in sys.argv: h("set TLDRevamp.Net.MpServer.JoinAtHost False")
-        h("mp host 27070"); L(f"mp joinid {h('net me')['steamId']}")
+        h("mp host 27070"); L(join_cmd(h))
         if not until(lambda: L("mp status")["client"]["ready"], 180): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafety.BlockAutoSave True")
         print("  joiner's spot:", g(L, "TLDRevamp.Net.MpClient.JoinSpotLast"), flush=True)

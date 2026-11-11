@@ -16,7 +16,7 @@ not see. Storm rows: [id, prefab, gx, gz, size, speed, xdir, ydir, life, distanc
 import sys, os, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
-from mplib import Agent, ensure_both, seeded_both
+from mplib import Agent, ensure_both, seeded_both, join_cmd
 
 RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"
 VERDICTS = []
@@ -57,7 +57,7 @@ with game.ProtectedSession():
     h(f"tpground {sand['gx']} {sand['gz']}"); L(f"tpground {sand['gx'] + 10} {sand['gz']}"); time.sleep(8)
     print("  before: host", h("mp storms"), "\n          laptop", L("mp storms"), flush=True)
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
-    h("mp host 27070"); L(f"mp joinid {h('net me')['steamId']}")
+    h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
     L("set TLDRevamp.TestSafety.BlockAutoSave True")
     gods = {}

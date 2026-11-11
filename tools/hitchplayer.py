@@ -115,6 +115,10 @@ with game.ProtectedSession():
         tr = place(); print("  gap:", h(f"mount gap {car} {tr}"), flush=True)
         verdict("S ALONE (A SESSION OF ONE): THE HOST HITCHES BY HAND", try_hitch("host", h, {"host": h}, tr, car, "S"))
         unhitch(h, car, tr)
+        # the solo round's trailers off the spot: the session's trailer goes in the same place, and the spawn's ground ray
+        # found the old one there ("no ground generated there", 2026-11-11)
+        for t_ in (tr, probe): print("  removed:", h(f"deleteshare {t_}"), flush=True)
+        time.sleep(1)
         h("mp stop"); time.sleep(2)
 
         if not join_both(h, L): sys.exit("JOINER NEVER JOINED")

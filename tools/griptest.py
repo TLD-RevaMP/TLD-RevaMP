@@ -11,7 +11,7 @@ that does not move. Now taking the grip takes the vehicle.
 import sys, os, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
-from mplib import Agent, ensure_both, seeded_both
+from mplib import Agent, ensure_both, seeded_both, join_cmd
 
 RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"
 VEH = sys.argv[sys.argv.index("--vehicle") + 1] if "--vehicle" in sys.argv else "Car01Full"   # run 2: Car01 is the bare body
@@ -52,7 +52,7 @@ with game.ProtectedSession():
     name = VEH or (grips[0][1] if grips else None)
     if not name: sys.exit("no vehicle has grips")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
-    h("mp host 27070"); L(f"mp joinid {h('net me')['steamId']}")
+    h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
     L("set TLDRevamp.TestSafety.BlockAutoSave True")
     gods = {}

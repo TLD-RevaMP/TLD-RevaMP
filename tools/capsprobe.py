@@ -7,7 +7,7 @@ both machines' cap state must agree and the cap's colliders must be on where the
 import sys, time, math, pathlib, json
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
-from mplib import Agent, ensure_both, seeded_both
+from mplib import Agent, ensure_both, seeded_both, join_cmd
 
 def arg(n, d, c=str): return c(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
 RELAY, CARID = arg("--relay", "iad"), arg("--car", 2, int)
@@ -34,7 +34,7 @@ with game.ProtectedSession():
     for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
     try:
-        h("mp host 27070"); L(f"mp joinid {h('net me')['steamId']}")
+        h("mp host 27070"); L(join_cmd(h))
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
         L("set TLDRevamp.TestSafety.BlockAutoSave True")
         OLD = "--old" in sys.argv

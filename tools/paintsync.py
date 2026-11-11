@@ -9,7 +9,7 @@ Each time: the colours the same on both machines, and the painted part the colou
 import sys, time, math, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import game
-from mplib import Agent, ensure_both, seeded_both
+from mplib import Agent, ensure_both, seeded_both, join_cmd
 from roadkit import tp
 
 RELAY = sys.argv[sys.argv.index("--relay") + 1] if "--relay" in sys.argv else "iad"
@@ -53,7 +53,7 @@ with game.ProtectedSession():
     h = seeded_both(L)
     for s_ in (h, L): s_("set TLDRevamp.TestSafety.BlockAutoSave True")
     if RELAY != "off": h(f"net relay {RELAY}"); L(f"net relay {RELAY}")
-    h("mp host 27070"); L(f"mp joinid {h('net me')['steamId']}")
+    h("mp host 27070"); L(join_cmd(h))
     if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER JOINED")
     L("set TLDRevamp.TestSafety.BlockAutoSave True")
     gods = {}
@@ -96,7 +96,7 @@ with game.ProtectedSession():
         until(lambda: len(colours(L)) > 0 and len(colours(h)) > 0, 30)
         check("3 AFTER THE FAR STORE", PART, (0.05, 0.1, 0.9))
         L("mp stop"); time.sleep(4)
-        L(f"mp joinid {h('net me')['steamId']}")
+        L(join_cmd(h))
         if not until(lambda: L("mp status")["client"]["ready"], 150): sys.exit("LAPTOP NEVER REJOINED")
         L(f"tpground {x0 + 6} {z0}"); time.sleep(6)
         until(lambda: len(colours(L)) > 0, 30)
