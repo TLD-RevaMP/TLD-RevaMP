@@ -57,6 +57,31 @@ public sealed class SecondAccountTests : IDisposable
     }
 
     [Fact]
+    public void TldLoaderModsReachTheSecondGame()
+    {
+        // RevaMP runs the TLD Loader mods in BepInEx/TLDLoaderMods and a host refuses a joiner whose ones differ: before
+        // 2026-11-12 the mirror skipped that folder, so the second game had none of the copy's
+        var c = Copy();
+        var twin = SecondAccount.GameDir(c);
+        var mods = Path.Combine(c.GameDir, "BepInEx", "TLDLoaderMods");
+        Put(Path.Combine(mods, "M_Nitrous.dll"), "nitrous");
+        Put(Path.Combine(mods, "Assets", "CoinMod", "coin.unity3d"), "coin bundle");
+        SecondAccount.Mirror(c, _ => { });
+        Assert.Equal("nitrous", File.ReadAllText(Path.Combine(twin, "BepInEx", "TLDLoaderMods", "M_Nitrous.dll")));
+        Assert.Equal("coin bundle", File.ReadAllText(Path.Combine(twin, "BepInEx", "TLDLoaderMods", "Assets", "CoinMod", "coin.unity3d")));
+        Assert.Null(SecondAccount.Behind(c));
+
+        // a mod added to the copy: the second game is behind until the next start; one removed goes from it too
+        Put(Path.Combine(mods, "Wristwatch.dll"), "watch");
+        Assert.Equal("its BepInEx or mods differ from this copy's", SecondAccount.Behind(c));
+        File.Delete(Path.Combine(mods, "M_Nitrous.dll"));
+        SecondAccount.Mirror(c, _ => { });
+        Assert.Null(SecondAccount.Behind(c));
+        Assert.True(File.Exists(Path.Combine(twin, "BepInEx", "TLDLoaderMods", "Wristwatch.dll")));
+        Assert.False(File.Exists(Path.Combine(twin, "BepInEx", "TLDLoaderMods", "M_Nitrous.dll")));
+    }
+
+    [Fact]
     public void BehindWhenTheCopyChangesAfterTheSecondGameStarted()
     {
         var c = Copy();

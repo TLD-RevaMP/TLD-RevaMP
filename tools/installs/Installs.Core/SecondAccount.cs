@@ -16,6 +16,9 @@ public static class SecondAccount
     public static string Dir(CopyInfo c) => Path.Combine(c.Dir, "account2");
     public static string GameDir(CopyInfo c) => Path.Combine(Dir(c), "game");
     public static string Exe(CopyInfo c) => Path.Combine(GameDir(c), "TheLongDrive.exe");
+    /// <summary>The BepInEx folders whose code the game loads, mirrored exactly. TLDLoaderMods: RevaMP runs the TLD Loader mods in
+    /// it, and a host refuses a joiner whose TLD Loader mods differ (before 2026-11-12 the second game never got them).</summary>
+    internal static readonly string[] Loaded = ["core", "plugins", "patchers", "TLDLoaderMods"];
 
     /// <summary>Sandboxie-Plus's folder (the one with Start.exe), or null.</summary>
     public static string? Sandboxie()
@@ -46,8 +49,9 @@ public static class SecondAccount
             if (File.Exists(s)) Files.CopyFile(s, d);
             else if (File.Exists(d)) File.Delete(d);
         }
-        // BepInEx loads every DLL under plugins and patchers: exactly the copy's, nothing left over
-        foreach (var rel in new[] { "core", "plugins", "patchers" })
+        // BepInEx loads every DLL under plugins and patchers, and RevaMP every TLD Loader mod in TLDLoaderMods (with its
+        // assets): exactly the copy's, nothing left over (the join check refuses other TLD Loader mods)
+        foreach (var rel in Loaded)
         {
             string s = Path.Combine(c.GameDir, "BepInEx", rel), d = Path.Combine(dst, "BepInEx", rel);
             Files.DeleteDir(d);
@@ -62,7 +66,7 @@ public static class SecondAccount
     /// <summary>How the second game's install differs from the copy's now, or null when it matches (or was never started).
     /// The mirror is only made when the second game starts, so a copy rebuilt or given other mods since then leaves the
     /// second game on the old ones: multiplayer between the two then refuses (other build) or misbehaves (other mods).
-    /// Mirror copies BepInEx's core/plugins/patchers exactly with their write times, so size + write time per file tells.</summary>
+    /// Mirror copies BepInEx's core/plugins/patchers/TLDLoaderMods exactly with their write times, so size + write time per file tells.</summary>
     public static string? Behind(CopyInfo c)
     {
         if (!File.Exists(Exe(c))) return null;
@@ -75,7 +79,7 @@ public static class SecondAccount
             string theirs = BuildLabel(Bep(copy, "plugins", "TLDRevamp", "TLDRevamp.dll")), ours = BuildLabel(Bep(mine, "plugins", "TLDRevamp", "TLDRevamp.dll"));
             return ours != theirs ? $"it has RevaMP {ours}, this copy {theirs}" : "it has a different RevaMP build than this copy";
         }
-        return new[] { "core", "plugins", "patchers" }.All(rel => SameFiles(Bep(copy, rel), Bep(mine, rel))) ? null
+        return Loaded.All(rel => SameFiles(Bep(copy, rel), Bep(mine, rel))) ? null
             : "its BepInEx or mods differ from this copy's";
     }
 
