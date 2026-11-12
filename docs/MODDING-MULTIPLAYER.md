@@ -246,7 +246,9 @@ mod's patches or none: a patch naming what the beta lacks would throw inside the
 GameUtil, CopyComponent — ModHost.LoaderFeatures; not its item registration, which builds on the public game's item
 categories). DbLoad runs
 for every mod with LoadInDB once per item database, in the order of the mods' IDs, so every machine changes and adds
-items the same way. Most of those mods were written for single player. A converter would help them into multiplayer
+items the same way. That holds only when every player has the same TLD Loader mods: a host refuses a joiner whose mods differ by
+ID, version or DLL (SHA-256), and says what to install or remove (`Net/LoaderModCheck.cs`, config
+Mods.LoaderModsMustMatch; nothing is downloaded, these mods are not approved files). Most of those mods were written for single player. A converter would help them into multiplayer
 without rewriting them:
 
 1. **Scan** a Loader mod's assembly and report what it does that matters in a session: objects it creates,

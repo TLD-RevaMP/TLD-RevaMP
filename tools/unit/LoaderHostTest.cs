@@ -49,6 +49,14 @@ static class LoaderHostTest
         ModHost.Start();
         Check("the host reports the mod it loaded", ModHost.Status().Contains("Recorder Mod"));
         Check("the host loaded one mod", ModHost.Status().Contains("1 mod(s)"));
+        {
+            // the join check's list: the mod with the SHA-256 of its DLL (what a joiner must match)
+            var jl = ModHost.JoinList();
+            string want;
+            using (var sha = System.Security.Cryptography.SHA256.Create())
+                want = BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(Path.Combine(modsDir, "RecorderMod.dll")))).Replace("-", "").ToLowerInvariant();
+            Check("the join list has the mod with its DLL's SHA-256", jl.Count == 1 && jl[0].Name == "Recorder Mod" && jl[0].Hash == want);
+        }
         Check("the host gives the mods their config folder",
               Directory.Exists(Path.Combine(tmp, "BepInEx", "config", "TLDLoaderMods")) ||
               ModHost.Status().Contains("1 mod(s)"));

@@ -262,6 +262,8 @@ namespace TLDRevamp
             go.AddComponent<VR.Native.VrNativeRunner>();   // native VR: the hand laser after the game's own frame
             ModHost.Retarget = Config.Bind("Mods", "RetargetLoaderMods", true,
                 "TLD Loader mods are built for the public game: where a game field is the same integer with the other sign here (idInSave is a uint on the beta), point the mod at the beta's type. Off: load them unchanged.").Value;
+            ModHost.MustMatch = Config.Bind("Mods", "LoaderModsMustMatch", true,
+                "When you host: refuse players whose TLD Loader mods (BepInEx/TLDLoaderMods) differ from yours (mod ID, version or DLL). Items those mods add reach other players as game items only when everyone has the same mods. Off: they join anyway, and what those mods add may be missing or wrong for them.").Value;
             ModHost.Start();   // TLDLoader mods from BepInEx/TLDLoaderMods (TLDLoader itself doesn't run on the beta)
             if (Config.Bind("Mods", "ScanLoaderMods", false,
                     "For mod authors: read every TLD Loader mod in BepInEx/TLDLoaderMods and write what it would need for multiplayer (a report and a code skeleton) to BepInEx/TLDRevampModScan.").Value)

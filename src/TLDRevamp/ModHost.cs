@@ -18,7 +18,7 @@ namespace TLDRevamp
     {
         private sealed class Loaded
         {
-            public object Mod; public string Id, Name, Version, File;
+            public object Mod; public string Id, Name, Version, File, Hash;   // Hash: SHA-256 of the DLL (the join check)
             public MethodInfo OnMenuLoad, OnLoad, OnUnload, Config, Update, FixedUpdate, OnGUI;   // null: not overridden
             public MethodInfo DbLoad, DbLoadOld;   // with LoadInDB: DbLoad and the older dbLoad, both as TLDLoader calls them
             public string LastError;
@@ -86,7 +86,7 @@ namespace TLDRevamp
                         try
                         {
                             var mod = Activator.CreateInstance(t);
-                            var l = new Loaded { Mod = mod, File = Path.GetFileName(dll), BrokenTypes = broken };
+                            var l = new Loaded { Mod = mod, File = Path.GetFileName(dll), BrokenTypes = broken, Hash = FileHash(dll) };
                             l.Id = (string)modBase.GetProperty("ID").GetValue(mod);
                             l.Name = (string)modBase.GetProperty("Name").GetValue(mod);
                             l.Version = (string)modBase.GetProperty("Version").GetValue(mod);
@@ -370,11 +370,33 @@ namespace TLDRevamp
         /// Whether OnUnload has run since the last OnLoad (the status line reports it).
         public static bool UnloadCalled => _unloadCalled;
 
+        /// Host: refuse joiners whose TLD Loader mods differ (config Mods.LoaderModsMustMatch).
+        public static bool MustMatch = true;
+        public static int JoinsRefused, JoinsAdmittedDiffering;
+
+        /// Every TLD Loader mod running here, as the join check compares them (Net/LoaderModCheck).
+        public static List<Net.LoaderModCheck.Entry> JoinList()
+        {
+            var list = new List<Net.LoaderModCheck.Entry>();
+            foreach (var l in Mods) list.Add(new Net.LoaderModCheck.Entry(l.Id, l.Name, l.Version, l.Hash));
+            return list;
+        }
+
+        private static readonly Dictionary<string, string> Hashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private static string FileHash(string path)
+        {
+            if (Hashes.TryGetValue(path, out var h)) return h;
+            try { using (var sha = System.Security.Cryptography.SHA256.Create()) h = BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(path))).Replace("-", "").ToLowerInvariant(); }
+            catch (Exception e) { h = ""; Plugin.Log.LogWarning("ModHost: hashing " + Path.GetFileName(path) + ": " + e.Message); }
+            return Hashes[path] = h;
+        }
+
         public static string Status()
         {
             var rows = new List<string>();
-            foreach (var l in Mods) rows.Add("{\"id\":" + Json.Str(l.Id) + ",\"name\":" + Json.Str(l.Name) + ",\"version\":" + Json.Str(l.Version) + ",\"lastError\":" + Json.Str(l.LastError ?? "") + "}");
-            return "{\"info\":" + Json.Str(Info) + ",\"retargeted\":" + Retargeted + ",\"inGame\":" + (_worldUp ? "true" : "false") + ",\"onLoadCalled\":" + (_gameLoadedCalled ? "true" : "false") +
+            foreach (var l in Mods) rows.Add("{\"id\":" + Json.Str(l.Id) + ",\"name\":" + Json.Str(l.Name) + ",\"version\":" + Json.Str(l.Version) + ",\"hash\":" + Json.Str(l.Hash ?? "") + ",\"lastError\":" + Json.Str(l.LastError ?? "") + "}");
+            return "{\"info\":" + Json.Str(Info) + ",\"retargeted\":" + Retargeted + ",\"mustMatch\":" + (MustMatch ? "true" : "false") +
+                   ",\"joinsRefused\":" + JoinsRefused + ",\"joinsAdmittedDiffering\":" + JoinsAdmittedDiffering + ",\"inGame\":" + (_worldUp ? "true" : "false") + ",\"onLoadCalled\":" + (_gameLoadedCalled ? "true" : "false") +
                    ",\"unloadedSinceLastLoad\":" + (_unloadCalled ? "true" : "false") + ",\"hasConfig\":" + (AnyConfig ? "true" : "false") + ",\"mods\":[" + string.Join(",", rows) + "]}";
         }
     }

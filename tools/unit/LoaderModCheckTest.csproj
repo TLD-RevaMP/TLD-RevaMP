@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- offline unit test of the TLD Loader mod check in Hello: dotnet run (project tools/unit/LoaderModCheckTest.csproj) -->
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+  <ItemGroup><Compile Include="LoaderModCheckTest.cs" /><Compile Include="../../src/TLDRevamp/Net/LoaderModCheck.cs" /><Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" /></ItemGroup>
+</Project>

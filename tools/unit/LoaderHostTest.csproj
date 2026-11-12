@@ -4,7 +4,7 @@
     <Compile Include="LoaderHostTest.cs" />
     <Compile Include="fixtures/loader/HostStubs.cs" />
     <!-- the REAL host, not a copy of it -->
-    <Compile Include="../../src/TLDRevamp/ModHost.cs" />
+    <Compile Include="../../src/TLDRevamp/ModHost.cs" /><Compile Include="../../src/TLDRevamp/Net/LoaderModCheck.cs" /><Compile Include="../../src/TLDRevamp/Net/NetBuffer.cs" />
     <Compile Include="../../src/TLDRevamp/LoaderRetarget.cs" />
     <PackageReference Include="Mono.Cecil" Version="0.11.5" />
     <!-- Build both runtime fixtures without linking them into the host test.

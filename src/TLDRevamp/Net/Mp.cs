@@ -595,6 +595,7 @@ namespace TLDRevamp.Net
                     var mods = ModObjects.CheckModList(r);
                     string build = BuildCheck.Read(r);   // after the mod list: older hosts never read it
                     WorldCheckRules.Read(r, out string gameData, out string genPatches);
+                    var loaderMods = LoaderModCheck.Read(r);   // last: hosts before this check never read it
                     if (!Identify(c, p, sid, name, out ulong steamId, out bool saved)) return;
                     if (!Admit(c, p, steamId, pw)) return;
                     // mods using the multiplayer API must match. Unlike the game's build (announced, not refused): a mod
@@ -622,6 +623,21 @@ namespace TLDRevamp.Net
                         Plugin.Log.LogWarning(BuildCheck.AnomalyLine(Session.CleanName(name), bc, build, Plugin.BuildIdentity) + " - other version, refused");
                         Reject(c, JoinChecks.HelloRefusal(false, ver, mod, Protocol.Version, Plugin.Version), Protocol.RejectOther);
                         return;
+                    }
+                    // TLD Loader mods: their items are shared as game items, right only when both have the same mods.
+                    // Before the world check: a mod patching the generators is named here, not as "other generator patches".
+                    string loader = LoaderModCheck.Refusal(loaderMods == null ? null : LoaderModCheck.Differences(ModHost.JoinList(), loaderMods));
+                    if (loader != null)
+                    {
+                        if (ModHost.MustMatch)
+                        {
+                            ModHost.JoinsRefused++;
+                            Plugin.Log.LogWarning($"[anomaly] TLD Loader mods differ: {Session.CleanName(name)} refused: {loader}");
+                            Reject(c, loader, Protocol.RejectOther);
+                            return;
+                        }
+                        ModHost.JoinsAdmittedDiffering++;
+                        Plugin.Log.LogWarning($"[anomaly] TLD Loader mods differ: {Session.CleanName(name)} admitted (Mods.LoaderModsMustMatch off): {loader}");
                     }
                     // every machine generates the world itself: another game, or other mods patching the generators, give
                     // another world. The patches only once the API mods match: a missing mod the host offers comes first.
@@ -1165,6 +1181,7 @@ namespace TLDRevamp.Net
             ModObjects.WriteModList(_w);   // mods using the multiplayer API: must match the host's (ids, versions, file hashes)
             _w.Str(Plugin.BuildIdentity);   // this DLL's own build: other code under the same version is refused (BuildCheck)
             WorldCheck.Write(_w);   // what the world is generated from here: the game's data files, other mods' generator patches
+            LoaderModCheck.Write(_w, ModHost.JoinList());   // TLD Loader mods: must match the host's (ids, versions, DLL hashes)
             T.Send(_conn, _w, SteamTransport.SendReliable);
         }
 
