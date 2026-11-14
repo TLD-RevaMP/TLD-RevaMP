@@ -131,7 +131,7 @@ namespace TLDRevamp
         }
 
         /// A/B (config Mods.RetargetLoaderMods, read before the mods load): false = before 2026-11-11, every mod loaded
-        /// as it is, its int reads of the beta's uint fields (idInSave) missing (LoaderRetarget).
+        /// as it is, without LoaderRetarget's integer-sign fixes or public-name adapters.
         public static bool Retarget = true;
         public static int Retargeted;
 

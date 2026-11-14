@@ -59,6 +59,7 @@ static class LoaderRetargetTest
 
     static int Main()
     {
+        Aliases();
         var gameAsm = typeof(Saved).Assembly;
         var sample = new Saved { key = 7, size = 1.5f };
 
@@ -103,5 +104,71 @@ static class LoaderRetargetTest
 
         Console.WriteLine(failures == 0 ? "ALL PASS" : failures + " FAILED");
         return failures == 0 ? 0 : 1;
+    }
+
+    static void Aliases()
+    {
+        string dll = Path.Combine(Path.GetDirectoryName(typeof(LoaderRetargetTest).Assembly.Location), "AliasMod.dll");
+        byte[] original = File.ReadAllBytes(dll);
+        using (var mod = ModuleDefinition.ReadModule(dll))
+        {
+            var changes = LoaderRetarget.Apply(mod, typeof(mainscript).Assembly);
+            Check("all twelve fields and fourteen method shapes are retargeted", changes.Count == 26);
+            Check("aliases are listed with their beta targets", System.Linq.Enumerable.Count(LoaderRetarget.AliasDescriptions()) == 27);
+            var rewritten = LoadBytes(mod).GetType("AliasMod");
+            var p = new fpscontroller(); var r = new radioscript(); var c = new carscript();
+            var m = new mainscript(); var menu = new menuhandler();
+            var body = new UnityEngine.Transform(); var data = new DataFromMenuScript(); var settings = new settingsscript();
+            var mode = new gamemodesettingsscript.gamemodesettings();
+            gamemodesettingsscript.s = new gamemodesettingsscript();
+            kaposztaleves.s = new kaposztaleves();
+            object[] args = { p, r, c, m, menu, body, data, settings, mode };
+            foreach (var operation in new[] { "Write", "Address" })
+            {
+                p.BodyRot = null; mainscript.s = null; r.Bvolume.tunedLerp = 0; c.lightUsable.currentTurnState = 0;
+                c.debugCanvas = null;
+                DataFromMenuScript.s = null; settingsscript.s = null; gamemodesettingsscript.s.S = null;
+                kaposztaleves.s.settings = new kaposztaleves.devSettings();
+                rewritten.GetMethod(operation).Invoke(null, args);
+                Check(operation + ": Tb writes BodyRot", p.BodyRot == body);
+                Check(operation + ": M writes the current singleton", mainscript.s == m);
+                Check(operation + ": v writes the usable's volume", r.Bvolume.tunedLerp == 0.625f);
+                Check(operation + ": lampak writes the usable's light state", c.lightUsable.currentTurnState == 2);
+                Check(operation + ": KmhObj writes the speed display object", c.debugCanvas == (UnityEngine.GameObject)rewritten.GetField("Display").GetValue(null));
+                Check(operation + ": DFMS writes the current singleton", DataFromMenuScript.s == data);
+                Check(operation + ": settings writes the current singleton", settingsscript.s == settings);
+                Check(operation + ": GSettings writes the live mode", gamemodesettingsscript.s.S == mode);
+                Check(operation + ": godmode writes through the beta's struct", kaposztaleves.s.settings.god);
+                Check(operation + ": Showkmh writes through the beta's struct", kaposztaleves.s.settings.kmh);
+                Check(operation + ": every old field reads live beta storage", (bool)rewritten.GetMethod("Read").Invoke(null, args));
+            }
+            // Replace the beta's storage after the mod loaded: its reads must follow the new objects.
+            body = new UnityEngine.Transform(); data = new DataFromMenuScript(); settings = new settingsscript();
+            mode = new gamemodesettingsscript.gamemodesettings(); m = new mainscript();
+            p.BodyRot = body; mainscript.s = m; DataFromMenuScript.s = data; settingsscript.s = settings;
+            gamemodesettingsscript.s = new gamemodesettingsscript { S = mode };
+            args = new object[] { p, r, c, m, menu, body, data, settings, mode };
+            Check("reads follow replaced beta storage", (bool)rewritten.GetMethod("Read").Invoke(null, args));
+            var h = new headlightscript(); var s = new survivalscript();
+            rewritten.GetMethod("Calls").Invoke(null, new object[] { p, r, m, h, s });
+            Check("RightHandRelease enables the beta's sync argument", p.Released);
+            Check("UpdValues drops the unused public argument", r.Updates == 1);
+            Check("PressedEscape uses the game's local input arguments", m.Screenshot && !m.MainMenu);
+            Check("both SwitchState overloads call the beta and wrap", h.Calls == 2 && h.switchToState == 0 && h.Sender == null);
+            Check("Damage preserves amount and show, supplies no direction", s.Lost == 3 && s.Shown && s.Direction.x == 0 && s.Direction.y == 0 && s.Direction.z == 0);
+            Check("DamageInstant preserves amount and show, supplies no direction", s.InstantLost == 4 && !s.InstantShown && s.InstantDirection.x == 0 && s.InstantDirection.y == 0 && s.InstantDirection.z == 0);
+            Check("ChGodMode writes the beta's god flag", !kaposztaleves.s.settings.god);
+            Check("ChKmh writes the beta's speed display flag", !kaposztaleves.s.settings.kmh);
+            Check("FoodCh calls the moved callback with its argument", kaposztaleves.s.Food == 1);
+            Check("WaterCh calls the moved callback with its argument", kaposztaleves.s.Water == 2);
+            Check("HpCh calls the moved callback with its argument", kaposztaleves.s.Hp == 3);
+            Check("PissCh calls the moved callback with its argument", kaposztaleves.s.Piss == 4);
+            Check("ShitCh calls the moved callback with its argument", kaposztaleves.s.Shit == 5);
+            Check("the alias pass is idempotent", LoaderRetarget.Apply(mod, typeof(mainscript).Assembly).Count == 0);
+            string logged = null;
+            var loaded = LoaderRetarget.Load(dll, typeof(mainscript).Assembly, new[] { Path.GetDirectoryName(dll) }, line => logged = line);
+            Check("Load logs the aliases used and loads the rewritten bytes", string.IsNullOrEmpty(loaded.Location) && logged != null && logged.Contains("radioscript.v -> radioscript.Bvolume.tunedLerp") && logged.Contains("mainscript.FoodCh(System.Single) -> kaposztaleves.s.PressedFoodCh(System.Single)"));
+            Check("the public-shaped fixture stays unchanged on disk", System.Linq.Enumerable.SequenceEqual(original, File.ReadAllBytes(dll)));
+        }
     }
 }

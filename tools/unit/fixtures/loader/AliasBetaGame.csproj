@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>netstandard2.1</TargetFramework><AssemblyName>AliasGame</AssemblyName><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+  <ItemGroup><Compile Include="AliasGame.cs" /><Compile Remove="$(MSBuildThisFileDirectory)../../TestCrashGuard.cs" /></ItemGroup>
+</Project>

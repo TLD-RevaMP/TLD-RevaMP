@@ -240,8 +240,22 @@ and savedatascript.d, which the preloader adds to the game's classes: TLDRevamp.
 mainscript.seed/load/napszak as instance fields Unity never saves, set from the beta's world seed, its load flag (kept
 for the whole world: the game clears its own on the first frame) and napszakvaltakozas.s; and where a
 game field is the same integer with the other sign on the beta, as idInSave (an int there, a uint here), ModHost points
-the mod's own reference at the beta's type before loading it: LoaderRetarget, config Mods.RetargetLoaderMods; and TLD
-Loader's helpers: SettingAPI, LoadedMods, isOnMainMenu/GetCurrentScene, Keybind, Logger/UseLogger, UseHarmony (all of a
+the mod's own reference at the beta's type before loading it: LoaderRetarget, config Mods.RetargetLoaderMods.
+That switch also enables public-name rewrites: fpscontroller.Tb -> BodyRot, radioscript.v -> Bvolume.tunedLerp,
+carscript.lampak -> lightUsable.currentTurnState, carscript.KmhObj -> debugCanvas; fpscontroller.M -> mainscript.s;
+menuhandler.DFMS and mainscript.DFMS
+-> DataFromMenuScript.s; menuhandler.Settings and mainscript.SettingObj -> settingsscript.s; mainscript.GSettings
+-> gamemodesettingsscript.s.S. Reads, writes and field addresses reach the beta's storage directly. Method adapters
+also route mainscript.godmode/Showkmh and ChGodMode/ChKmh to kaposztaleves.s.settings.god/kmh, and
+FoodCh/WaterCh/HpCh/PissCh/ShitCh to kaposztaleves.s.PressedFoodCh/PressedWaterCh/PressedHpCh/PressedPissCh/PressedShitCh.
+The other method adapters cover RightHandRelease() (sync=true), UpdValues(bool) (the unused argument is dropped),
+PressedEscape() (true,false),
+both SwitchState overloads (null sender; the no-argument call advances the light state), and Damage/DamageInstant
+(zero direction, preserving amount and show). `mods aliases` lists their mappings even in the menu; each changed DLL
+logs which ones it used. Unchanged DLLs still load from their files. The old save, part and world systems have no
+aliases in this batch. The existing seed/load/napszak fields are host snapshots; writing those does not write beta
+state. TLD Loader's helpers also work: SettingAPI, LoadedMods, isOnMainMenu/GetCurrentScene, Keybind, Logger/UseLogger,
+UseHarmony (all of a
 mod's patches or none: a patch naming what the beta lacks would throw inside the game's own method), Events,
 GameUtil, CopyComponent — ModHost.LoaderFeatures; not its item registration, which builds on the public game's item
 categories). DbLoad runs

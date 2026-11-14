@@ -65,9 +65,16 @@ namespace TLDRevamp
 
         public static string AliasStatus()
         {
+            var aliases = new System.Collections.Generic.List<string>();
+            foreach (var a in new[] { "mainscript.M -> mainscript.s (host mirror)", "itemdatabase.d -> itemdatabase.s (host mirror)",
+                                     "savedatascript.d -> savedatascript.s (host mirror)", "mainscript.seed -> DataFromMenuScript.s.seed (host snapshot)",
+                                     "mainscript.load -> from-save latch (host snapshot)", "mainscript.napszak -> napszakvaltakozas.s (host mirror)" })
+                aliases.Add(Json.Str(a));
+            foreach (var a in LoaderRetarget.AliasDescriptions()) aliases.Add(Json.Str(a));
+            string list = "\"aliases\":[" + string.Join(",", aliases.ToArray()) + "],\"rewrites\":" + (Retarget ? "true" : "false") + ",";
             var m = mainscript.s;
-            if (m == null) return "{\"world\":false}";
-            return "{\"seed\":" + (_fSeed?.GetValue(m) ?? "null") + ",\"load\":" + ((_fLoad?.GetValue(m) as bool?) == true ? "true" : "false") +
+            if (m == null) return "{" + list + "\"world\":false}";
+            return "{" + list + "\"seed\":" + (_fSeed?.GetValue(m) ?? "null") + ",\"load\":" + ((_fLoad?.GetValue(m) as bool?) == true ? "true" : "false") +
                    ",\"napszak\":" + (_fNapszak?.GetValue(m) != null ? "true" : "false") + ",\"gameSeed\":" + (DataFromMenuScript.s?.seed.ToString() ?? "null") + "}";
         }
 

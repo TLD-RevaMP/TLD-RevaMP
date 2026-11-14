@@ -6,5 +6,10 @@
     <Compile Include="../../src/TLDRevamp/LoaderRetarget.cs" />
     <!-- 0.11: 0.10.4 (what BepInEx 5 ships) cannot create a module on .NET Core; LoaderRetarget uses only API both have -->
     <PackageReference Include="Mono.Cecil" Version="0.11.5" />
+    <ProjectReference Include="fixtures/loader/AliasBetaGame.csproj" GlobalPropertiesToRemove="BaseIntermediateOutputPath;OutputPath" />
+    <ProjectReference Include="fixtures/loader/AliasMod.csproj" ReferenceOutputAssembly="false" OutputItemType="AliasFixture" GlobalPropertiesToRemove="BaseIntermediateOutputPath;OutputPath" />
   </ItemGroup>
+  <Target Name="CopyAliasFixture" AfterTargets="Build">
+    <Copy SourceFiles="@(AliasFixture)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
 </Project>
