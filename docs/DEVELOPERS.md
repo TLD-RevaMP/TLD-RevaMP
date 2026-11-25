@@ -212,8 +212,17 @@ protocol, the interest rules and the byte projections are in [MULTIPLAYER-ARCHIT
 - The host can **mute** and **kick** players.
 - **Teleport requests** (`/tpa <name>`, answered with `/y` or `/n`) are on by default with a 5-minute wait per
   player, and are set under **Settings → Revamp → Multiplayer → Teleport requests (when you host)**.
-- **Session settings** (join placement, teleport requests, the developer policy, and whether voice chat reaches
-  everyone) are set by the host and shown to joiners as read-only.
+- **Session settings** (join placement, teleport requests, the developer policy, whether voice chat reaches
+  everyone, and Hardcore) are set by the host and shown to joiners as read-only.
+- **Hardcore** (`src/TLDRevamp/Net/Hardcore.cs`, off by default): one saved switch, Settings → Revamp → World →
+  *Hardcore*, which counts in single player and is what a hosted session starts with; the host's Session settings →
+  *Hardcore* row changes the session and the switch together, and a joiner plays by the host's. While it is on, the
+  game's F1 developer menu closes as it opens and its last-spawn key spawns nothing (the host included; the bridge's
+  own spawns are not the menu); a building's tanks (`poiScript.tanks`: faucets, water towers) hold no water, which is
+  kept aside in the building's record and put back when Hardcore goes off; a part a crash knocks off
+  (`attachablescript.FallOFf`, on the machine that simulates the car) can't be mounted and is deleted for everyone 5 s
+  later, whoever holds it then; and `partconditionscript.Repair` and a tool's `washtriggerscript.Wash` do nothing.
+  Bridge: `mp hardcore [on|off]` (single player: the switch, not saved), `mp hardcore vanish <s>`.
 - **Voice to everyone**: holding the *Talk to everyone key* (Settings → Revamp → Multiplayer, **O** by default) sends
   that voice to every player, played without distance like a radio. Session settings → *Voice chat: Everyone hears
   everyone* does the same for every voice in the session.

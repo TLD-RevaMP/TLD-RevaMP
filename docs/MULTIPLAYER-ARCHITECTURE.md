@@ -640,7 +640,10 @@ clear it.
 The host owns the session's settings: the teleport-request switch and its cooldown, where joiners are placed, the
 developer-access policy (everyone, host only, disabled), and since protocol 55 whether voice chat reaches everyone (one
 byte appended to the snapshot; the voice relay then skips its distance check and marks each voice with the codec byte's
-top bit, which a player also sets while holding the *Talk to everyone* key, so the receivers play it 2D). The policy is **session-only** and is not saved. The snapshot
+top bit, which a player also sets while holding the *Talk to everyone* key, so the receivers play it 2D), and since
+protocol 63 the Hardcore switch (one more byte after the voice byte; every machine applies the rules itself from the
+snapshot it holds, `Net/Hardcore.cs`, and a crashed-off part is deleted by the machine whose crash knocked it off, as a
+player's deletion, so it goes for everyone even after another player took it). The policy is **session-only** and is not saved. The snapshot
 (message 111) carries the settings and a session token with a revision; the password itself is never on the wire, only
 the flag that there is one.
 

@@ -649,6 +649,14 @@ namespace TLDRevamp
                         case "say": return "{\"said\":" + (Net.Session.Say(arg.Substring(4)) ? "true" : "false") + "}";
                         case "tpa": return TLDRevamp.Net.Tpa.Stats();
                         case "gamemode": return TLDRevamp.Net.GameMode.Stats();
+                        case "hardcore":   // `mp hardcore [on|off] [vanish <s>]`: the host's session setting (single player: the own switch, not saved), the rules' counters
+                            if (ma.Length > 1 && (ma[1] == "on" || ma[1] == "off"))
+                            {
+                                if (Net.Mp.Server != null) Net.Mp.Server.UpdateSessionSettings(x => x.Hardcore = ma[1] == "on", false);
+                                else if (Net.Mp.Client == null) Net.Hardcore.Own = ma[1] == "on";
+                            }
+                            if (ma.Length > 2 && ma[1] == "vanish") Net.Hardcore.VanishS = Math.Max(0f, float.Parse(ma[2], mic));
+                            return Net.Hardcore.Stats();
                         case "friendhost": { var fh = Net.Session.FriendHosts(ulong.Parse(ma[1])); return fh == null ? "{\"hosting\":false}" : "{\"hosting\":true,\"version\":" + Json.Str(fh.Version) + ",\"mode\":" + Json.Str(fh.HasMode ? Net.GameMode.Describe(fh.Mode) : "") + "}"; }
                         case "playersave": if (ma.Length > 1 && ma[1] == "record") Net.PlayerSave.SendRecord(); return Net.PlayerSave.Stats();
                         // The host changes its own session's developer policy (the test's own host action: it needs

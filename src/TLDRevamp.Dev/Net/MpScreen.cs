@@ -56,7 +56,8 @@ namespace TLDRevamp.Net
                    ",\"settingRows\":[" + (TLDRevamp.Net.MpScreen.ObservedSettingsRows[0] != null ? Json.Str(TLDRevamp.Net.MpScreen.ObservedSettingsRows[0].GetComponentInChildren<TextMeshProUGUI>(true).text) : "null") + "," +
                    (TLDRevamp.Net.MpScreen.ObservedSettingsRows[1] != null ? Json.Str(TLDRevamp.Net.MpScreen.ObservedSettingsRows[1].GetComponentInChildren<TextMeshProUGUI>(true).text) : "null") + "," +
                    (TLDRevamp.Net.MpScreen.ObservedSettingsRows[2] != null ? Json.Str(TLDRevamp.Net.MpScreen.ObservedSettingsRows[2].GetComponentInChildren<TextMeshProUGUI>(true).text) : "null") + "," +
-                   (TLDRevamp.Net.MpScreen.ObservedSettingsRows[3] != null ? Json.Str(TLDRevamp.Net.MpScreen.ObservedSettingsRows[3].GetComponentInChildren<TextMeshProUGUI>(true).text) : "null") + "]" +
+                   (TLDRevamp.Net.MpScreen.ObservedSettingsRows[3] != null ? Json.Str(TLDRevamp.Net.MpScreen.ObservedSettingsRows[3].GetComponentInChildren<TextMeshProUGUI>(true).text) : "null") + "," +
+                   (TLDRevamp.Net.MpScreen.ObservedSettingsRows[4] != null ? Json.Str(TLDRevamp.Net.MpScreen.ObservedSettingsRows[4].GetComponentInChildren<TextMeshProUGUI>(true).text) : "null") + "]" +
                    ",\"settingsHostEditable\":" + (TLDRevamp.Net.MpScreen.ObservedSettingsRows[0] != null && TLDRevamp.Net.MpScreen.ObservedSettingsRows[0].interactable ? "true" : "false") +
                    ",\"message\":" + Json.Str(TLDRevamp.Net.MpScreen.ObservedMsg != null && TLDRevamp.Net.MpScreen.ObservedMsg.gameObject.activeSelf ? TLDRevamp.Net.MpScreen.ObservedMsg.text : null) + "}";
         }

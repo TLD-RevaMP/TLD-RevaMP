@@ -23,6 +23,7 @@ namespace TLDRevamp.Net
             SessionSettings.DeveloperPolicy = SessionSettingsDefaults.DeveloperPolicy;
             SessionSettings.HasPassword = Password.Length > 0;
             SessionSettings.VoiceEveryone = SessionSettingsDefaults.VoiceEveryone;
+            SessionSettings.Hardcore = SessionSettingsDefaults.Hardcore;
             SessionSettings.Normalize();
             ApplySessionSettingsLocally();
         }
@@ -49,6 +50,7 @@ namespace TLDRevamp.Net
                 SessionSettingsDefaults.TpaChoice = Math.Max(0, Array.IndexOf(Tpa.Choices, s.TpaEnabled ? s.TpaCooldownS : -1));
                 SessionSettingsDefaults.JoinAtHost = s.JoinAtHost;
                 SessionSettingsDefaults.VoiceEveryone = s.VoiceEveryone;
+                SessionSettingsDefaults.Hardcore = s.Hardcore;
                 RevampSettings.Save();
             }
             PublishSessionSettings(old);
@@ -144,6 +146,21 @@ namespace TLDRevamp.Net
             set => RevampSettings.SetInt("hostVoiceEveryone", value ? 1 : 0);
         }
 
+        /// The host's own Hardcore switch, the one Settings → Revamp → World shows (it applies in single player too).
+        public static bool Hardcore
+        {
+            get
+            {
+                var e = RevampSettings.Entries.Find(x => x.Key == "hardcore");
+                return e?.Get != null && e.Get() != 0;
+            }
+            set
+            {
+                var e = RevampSettings.Entries.Find(x => x.Key == "hardcore");
+                if (e?.Set != null) e.Set(value ? 1 : 0);
+            }
+        }
+
         internal static void ResetSessionPolicy() => DeveloperPolicy = DefaultDeveloperPolicy;
 
         /// The one-time migration of the old settings file: a `hostPassword=` line with a plaintext value is removed
@@ -179,6 +196,8 @@ namespace TLDRevamp.Net
         public static long DeniedBridgeCommands, Applied, Restored;
 
         internal static SessionSettingsSnapshot ClientSettings => _clientSettings?.Copy();
+        /// The host's Hardcore switch as this joiner last heard it (from Welcome on, before the host's world loads).
+        internal static bool ClientHardcore => _clientSettings != null && _clientSettings.Hardcore;
 
         internal static void ApplyClientSnapshot(SessionSettingsSnapshot settings, bool initial)
         {

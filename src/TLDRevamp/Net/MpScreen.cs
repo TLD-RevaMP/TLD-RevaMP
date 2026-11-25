@@ -50,7 +50,7 @@ namespace TLDRevamp.Net
         internal static GameObject ObservedSettingsPanel => _settingsPanel;
         private static TMP_InputField _settingsPassword;
         internal static TMP_InputField ObservedSettingsPassword => _settingsPassword;
-        private static readonly Button[] _settingsRows = new Button[4];
+        private static readonly Button[] _settingsRows = new Button[5];
         internal static System.Collections.Generic.IReadOnlyList<Button> ObservedSettingsRows => _settingsRows;
         private static bool _settingsOpen;
         internal static bool ObservedSettingsOpen { get => _settingsOpen; set => _settingsOpen = value; }
@@ -296,7 +296,7 @@ namespace TLDRevamp.Net
             pi.raycastTarget = true;
             var pr = (RectTransform)_settingsPanel.transform;
             pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0.5f, 0.5f);
-            pr.anchoredPosition = Vector2.zero; pr.sizeDelta = new Vector2(780f, 720f);
+            pr.anchoredPosition = Vector2.zero; pr.sizeDelta = new Vector2(780f, 802f);
 
             var title = NewSettingsText(_settingsPanel.transform, "Title", "Session settings", 42f, TextAlignmentOptions.Center);
             var tr = (RectTransform)title.transform; tr.anchorMin = tr.anchorMax = new Vector2(0.5f, 1f); tr.pivot = new Vector2(0.5f, 1f);
@@ -374,6 +374,7 @@ namespace TLDRevamp.Net
             else if (row == 2)
                 server.UpdateSessionSettings(x => x.DeveloperPolicy = (DeveloperAccessPolicy)(((int)x.DeveloperPolicy + 1) % 3), false);
             else if (row == 3) server.UpdateSessionSettings(x => x.VoiceEveryone = !x.VoiceEveryone, true);
+            else if (row == 4) server.UpdateSessionSettings(x => x.Hardcore = !x.Hardcore, true);
             Refresh();
         }
 
@@ -406,7 +407,7 @@ namespace TLDRevamp.Net
         /// current snapshot, and the one that fills them is the one below.
         internal static void RefreshSessionRows() => FillSettingRows();
 
-        /// The four rows of the session-settings panel, with the CURRENT values. The rows are filled whether the
+        /// The five rows of the session-settings panel, with the CURRENT values. The rows are filled whether the
         /// panel is open or not, so a joiner who opens the panel later sees the host's latest values.
         ///
         /// A joiner's rows are read-only: only the host may change the session's settings.
@@ -417,7 +418,7 @@ namespace TLDRevamp.Net
             bool host = Mp.Server != null;
             if (s == null)
             {
-                for (int i = 0; i < _settingsRows.Length; i++) { _settingsRows[i].interactable = false; Label(_settingsRows[i], i == 0 ? "TPA: waiting for host…" : i == 1 ? "Joiner placement: waiting…" : i == 2 ? "Developer commands: waiting…" : "Voice chat: waiting…"); }
+                for (int i = 0; i < _settingsRows.Length; i++) { _settingsRows[i].interactable = false; Label(_settingsRows[i], i == 0 ? "TPA: waiting for host…" : i == 1 ? "Joiner placement: waiting…" : i == 2 ? "Developer commands: waiting…" : i == 3 ? "Voice chat: waiting…" : "Hardcore: waiting…"); }
                 if (_settingsPassword != null) _settingsPassword.gameObject.SetActive(false);
                 return;
             }
@@ -428,6 +429,7 @@ namespace TLDRevamp.Net
             // read-only queries are not developer commands and stay available to everyone.
             Label(_settingsRows[2], "Developer commands: " + s.PolicyName); _settingsRows[2].interactable = host;
             Label(_settingsRows[3], "Voice chat: " + s.VoiceName); _settingsRows[3].interactable = host;
+            Label(_settingsRows[4], "Hardcore: " + s.HardcoreName); _settingsRows[4].interactable = host;
             if (_settingsPassword == null) return;
             _settingsPassword.gameObject.SetActive(host);
             if (host)

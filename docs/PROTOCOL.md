@@ -19,6 +19,7 @@ change, before this rule.
 
 ## 63
 
+- the session's Hardcore switch appended to the settings snapshot, after the voice byte (`SessionSettingsSnapshot.Hardcore`)
 - replayed mod edits (`SharedType.ReplayEdits`, API 6): ModEdited (114) carries an edit the owner accepted to every copy, with the record's version, the edit's time and a hash of the owner's record; ModResync (115) asks for the whole record (from the host to the owner it ends with a kind: send your record, or the history a new owner asked for ends here). ModRecord and ModAdd end with the record's version (u32) (`Net/EditChain.cs`)
 - an attach pose (and the place repair's glued poses) is relative to what the attach record names: the item it is on, or the building; a door, hood or lid it hangs on; on the ground the point itself. It was the point's parent, which a copy makes anew under another collider (`EntityAttachments.AttachFrame`)
 

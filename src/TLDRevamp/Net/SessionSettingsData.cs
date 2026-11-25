@@ -30,11 +30,15 @@ namespace TLDRevamp.Net
         public bool HasPassword;
         /// Voice chat reaches every player, wherever they are (Voice.VoiceRelay); off: only players within Voice.RangeM.
         public bool VoiceEveryone;
+        /// The session's Hardcore rules (Net/Hardcore.cs): no developer menu, empty faucets, crashed-off parts gone,
+        /// no cleaning.
+        public bool Hardcore;
 
         internal SessionSettingsSnapshot Copy() => new SessionSettingsSnapshot
         {
             SessionToken = SessionToken, Revision = Revision, TpaEnabled = TpaEnabled, TpaCooldownS = TpaCooldownS,
             JoinAtHost = JoinAtHost, DeveloperPolicy = DeveloperPolicy, HasPassword = HasPassword, VoiceEveryone = VoiceEveryone,
+            Hardcore = Hardcore,
         };
 
         internal void Normalize()
@@ -55,6 +59,7 @@ namespace TLDRevamp.Net
             w.U8((byte)DeveloperPolicy);
             w.Bool(HasPassword);
             w.Bool(VoiceEveryone);   // protocol 55, after the protocol 50 fields so their places stay
+            w.Bool(Hardcore);        // protocol 63, after the voice byte
         }
 
         internal static bool TryRead(NetReader r, out SessionSettingsSnapshot settings)
@@ -73,9 +78,11 @@ namespace TLDRevamp.Net
             settings.HasPassword = hasPassword != 0;
             byte voiceEveryone = r.U8();
             settings.VoiceEveryone = voiceEveryone != 0;
+            byte hardcore = r.U8();
+            settings.Hardcore = hardcore != 0;
             if (r.Bad || schema != Schema || settings.SessionToken == 0 || settings.Revision == 0 ||
                 policy > (byte)DeveloperAccessPolicy.Disabled ||
-                tpaEnabled > 1 || joinAtHost > 1 || hasPassword > 1 || voiceEveryone > 1 ||
+                tpaEnabled > 1 || joinAtHost > 1 || hasPassword > 1 || voiceEveryone > 1 || hardcore > 1 ||
                 // The cooldown is bounded whether or not TPA is enabled: a snapshot is the trust boundary, and a
                 // disabled-TPA snapshot that carries an arbitrary 16-bit cooldown is still a malformed snapshot.
                 settings.TpaCooldownS > MaxTpaCooldownS)
@@ -131,13 +138,14 @@ namespace TLDRevamp.Net
         public string PlacementName => JoinAtHost ? "Next to host" : "At world start";
         public string PasswordName => HasPassword ? "Set" : "None";
         public string VoiceName => VoiceEveryone ? "Everyone hears everyone" : "Nearby only";
+        public string HardcoreName => Hardcore ? "On" : "Off";
 
         internal string Json()
         {
             return "{\"token\":" + SessionToken + ",\"revision\":" + Revision + ",\"tpaEnabled\":" + (TpaEnabled ? "true" : "false") +
                    ",\"tpaCooldownS\":" + TpaCooldownS + ",\"joinAtHost\":" + (JoinAtHost ? "true" : "false") +
                    ",\"developerPolicy\":\"" + DeveloperPolicy + "\",\"hasPassword\":" + (HasPassword ? "true" : "false") +
-                   ",\"voiceEveryone\":" + (VoiceEveryone ? "true" : "false") + "}";
+                   ",\"voiceEveryone\":" + (VoiceEveryone ? "true" : "false") + ",\"hardcore\":" + (Hardcore ? "true" : "false") + "}";
         }
     }
 

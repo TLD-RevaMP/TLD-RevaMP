@@ -234,6 +234,11 @@ namespace TLDRevamp
                 "distance.\nOften: one every 15 to 45 minutes, most of them come your way.\nOff: none come up.\n\nIn " +
                 "multiplayer the host's setting counts.",
                 () => Sandstorms.Frequency, v => Sandstorms.SetFrequency(v));
+            Toggle("hardcore", "Hardcore", 0,
+                "No F1 developer menu. Faucets and water towers are empty. A part a crash knocks off can't be put back " +
+                "on and is gone a few seconds later. Cleaning tools clean nothing.\n\nIn multiplayer the host's setting " +
+                "counts (Session settings → Hardcore).",
+                () => Net.Hardcore.Own ? 1 : 0, v => Net.Hardcore.SetOwn(v == 1));
             Header("Multiplayer",
                 "Voice and text chat with the other players, and what your game allows when you host. Host or join from the game's Multiplayer button (or F11).");
             // the loading screen when joining is always on (2026-11-11: not a choice in the menu)
@@ -458,8 +463,7 @@ namespace TLDRevamp
                 // The host password is not a persisted value: the old plaintext line is removed by the migration
                 // (Net.SessionSettingsDefaults.Migrate) and the value lives in memory for this session only.
                 if (saved.TryGetValue("hostJoinAtHost", out string joinAtHost) && int.TryParse(joinAtHost, out int join)) IntegerValues["hostJoinAtHost"] = join == 0 ? 0 : 1;
-                if (saved.TryGetValue("hostVoiceEveryone", out string voiceAll) && int.TryParse(voiceAll, out int all)) IntegerValues["hostVoiceEveryone"] = all == 0 ? 0 : 1;
-                // The terrain for the next new game is picked on the new-game screen only (never in Settings); the last
+                if (saved.TryGetValue("hostVoiceEveryone", out string voiceAll) && int.TryParse(voiceAll, out int all)) IntegerValues["hostVoiceEveryone"] = all == 0 ? 0 : 1;                // The terrain for the next new game is picked on the new-game screen only (never in Settings); the last
                 // pick is remembered here. "terrainMode" is the key the Settings row used to write.
                 if ((saved.TryGetValue(NewGameTerrainKey, out string terrainText) || saved.TryGetValue("terrainMode", out terrainText))
                     && int.TryParse(terrainText, out int terrain))

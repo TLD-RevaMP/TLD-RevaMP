@@ -417,6 +417,7 @@ namespace TLDRevamp
             ("TLDRevamp.Net.EntityHands.WornClaimEveryS", Kind.OptIn, "Other values tune worn claim every s for Entities."),
             ("TLDRevamp.Net.EntityHands.WornClaimTries", Kind.OptIn, "Other values tune worn claim tries for Entities."),
             ("TLDRevamp.Net.EntityHands.WornOffHeadM", Kind.OptIn, "Other values tune worn off head m for Entities."),
+            ("TLDRevamp.Net.Hardcore.VanishS", Kind.Test, "Other values tune Hardcore.VanishS (seconds a part a crash knocked off lies before it is deleted, in a Hardcore session)."),
             ("TLDRevamp.Net.HealthWatchRules.AfterS", Kind.OptIn, "Other values tune HealthWatchRules.AfterS (a problem this long (two or more passes) before it counts)."),
             ("TLDRevamp.Net.HealthWatchRules.OwnerLeftAfterS", Kind.OptIn, "Other values tune HealthWatchRules.OwnerLeftAfterS (the host hands a leaver's objects on within a few seconds)."),
             ("TLDRevamp.Net.HealthWatchRules.PositionAfterS", Kind.OptIn, "Other values tune HealthWatchRules.PositionAfterS (a copy behind its owner: longer (a slow link catches up))."),

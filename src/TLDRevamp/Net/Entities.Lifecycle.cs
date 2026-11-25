@@ -49,6 +49,15 @@ namespace TLDRevamp.Net
 
         internal static bool TakePlayerDeleted(tosaveitemscript item) => _playerDeleted.Remove(item);
 
+        /// An item about to be destroyed here is a deletion as a player's is (cheatedStuff.Delete): a copy here goes out
+        /// as a deletion too (RemoveItem, or MemberGone for a member), not as a copy lost here (Hardcore's crashed-off parts).
+        internal static void NotePlayerDeleted(tosaveitemscript it)
+        {
+            if (!Entities.LifetimeInSession || it == null) return;
+            if (_playerDeleted.Count > 64) _playerDeleted.RemoveWhere(x => x == null);
+            _playerDeleted.Add(it);
+        }
+
         internal static void ClearPlayerDeleted() => _playerDeleted.Clear();
     }
 

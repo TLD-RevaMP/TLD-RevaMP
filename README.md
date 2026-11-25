@@ -121,6 +121,7 @@ seconds, you get a **Continue anyway** button as well.
 | **Voice** | Hold the game's **Voice chat** key (**K** if you never set one). Only players within about 60 m hear you. Hold **O** (Settings → Revamp → *Talk to everyone key*) to talk to every player, wherever they are. A host can make every voice reach everyone: Session settings → *Voice chat: Everyone hears everyone*. The microphone is the one Steam has chosen. |
 | **The player list** | Shows who is in the game and their ping. The host can **mute** and **kick**. |
 | **Teleport** | Type `/tpa <name>` in the chat to ask another player to teleport to you; they answer `/y` or `/n`. The host can turn this off. |
+| **Hardcore** | Settings → Revamp → *Hardcore* turns it on in single player and for the games you host; while hosting, Session settings → *Hardcore* does the same. In multiplayer the host's setting counts. Then nobody can open the F1 developer menu (the host neither), faucets and water towers are empty, a part a crash knocks off falls, can't be put back on and is gone a few seconds later, and cleaning tools clean nothing. Faucets get their water back when Hardcore goes off. |
 | **Performance overlay** | **Page Up** shows and hides the overlay with the frame graph. It starts hidden. |
 | **Bug report** | **Ctrl+Insert**, or `/bug` and a short note in the chat: see *Reporting a problem* below. |
 
