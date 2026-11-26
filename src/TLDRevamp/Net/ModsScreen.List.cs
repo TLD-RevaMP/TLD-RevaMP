@@ -319,7 +319,14 @@ namespace TLDRevamp.Net
             if (mine) { r.Primary = "Cancel"; r.PrimaryColour = ButtonRed; r.PrimaryOn = true; r.PrimaryDo = ModCatalog.Cancel; return r; }
             if (core) { r.Primary = "Built in"; r.PrimaryColour = ButtonGrey; return r; }
             if (manual) { r.Primary = "By hand"; r.PrimaryColour = ButtonGrey; r.Note = "Installed by hand: manage its files yourself."; return r; }
-            if (removed) { r.Primary = "Removed"; r.PrimaryColour = ButtonGrey; r.Note = "Gone at the next start."; return r; }
+            if (removed)
+            {
+                // Until the next start its files are still in place, so Install only takes the removal back.
+                bool files = ModInstall.ManagedFiles(m.Id).Count > 0;
+                r.Primary = files ? "Install" : "Removed"; r.PrimaryColour = files ? ButtonGreen : ButtonGrey; r.PrimaryOn = files && !busy;
+                if (files) r.PrimaryDo = () => KeepMod(m);
+                r.Note = "Gone at the next start."; return r;
+            }
             if (installed == null)
             {
                 r.Primary = "Install"; r.PrimaryColour = ButtonGreen; r.PrimaryOn = !busy && reason == null;
@@ -413,6 +420,13 @@ namespace TLDRevamp.Net
                 ModCatalog.Message = (m.Name ?? m.Id) + ": " + ModBrowser.State(m.Id) + ".";
             }
             catch (Exception e) { ModCatalog.Message = "Could not change mod: " + e.Message; }
+        }
+
+        private static void KeepMod(ModCatalog.Mod m)
+        {
+            if (ModCatalog.Busy) return;
+            try { ModBrowser.Action(m.Id, "enabled"); ModCatalog.Message = (m.Name ?? m.Id) + ": " + ModBrowser.State(m.Id) + "."; }
+            catch (Exception e) { ModCatalog.Message = "Could not install: " + e.Message; }
         }
 
         private static void RemoveMod(ModCatalog.Mod m)

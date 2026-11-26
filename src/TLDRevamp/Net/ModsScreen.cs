@@ -318,7 +318,8 @@ namespace TLDRevamp.Net
             version = installed == null ? (available != null ? "v" + available : "") : "v" + installed;
             if (ModActivation.Core(m.Id)) { state = "Built in"; colour = On; return; }
             if (manual) { state = "On · installed by hand"; colour = On; return; }
-            if (status.StartsWith("Removed")) { state = pending ? "Removed at next start" : "Removed"; colour = Removing; return; }
+            // a removal already carried out reads "Not installed" (ModActivation.Status), so this one is still to come
+            if (status.StartsWith("Removed")) { state = "Removed at next start"; colour = Removing; return; }
             if (installed == null)
             {
                 state = availableRelease ? "Not installed" : "Not available"; colour = availableRelease ? Absent : Unavailable; return;

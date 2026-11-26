@@ -107,7 +107,9 @@ namespace TLDRevamp.Net
         internal static string Status(string dir, string id, bool? loaded = null)
         {
             string desired = Desired(dir, id);
-            if (desired == "removed") return Pending(dir, id, loaded) ? "Removed at next start" : "Removed";
+            // The state file keeps saying removed after the next start has set the files aside. Nothing is left
+            // then, so the mod is simply not installed and can be installed again (Install queues it enabled).
+            if (desired == "removed") return Pending(dir, id, loaded) ? "Removed at next start" : "Not installed";
             if (Files(dir, id).Count == 0) return desired == "disabled" ? "Disabled (DLL folder or file missing)" : "Not installed";
             return Pending(dir, id, loaded) ? desired == "disabled" ? "Disabled (takes effect at next start)" : "Enabled at next start" : desired == "disabled" ? "Disabled" : "Enabled";
         }

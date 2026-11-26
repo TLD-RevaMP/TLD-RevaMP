@@ -85,8 +85,15 @@ static class ModActivationTest
             Check("disabled removal is queued without deleting", File.Exists(files[0]) && ModActivation.Pending(dir, id));
             ModActivation.Apply(dir, id);
             Check("remove disabled preserves DLL backup", ModActivation.Files(dir, id).Count == 0 && File.ReadAllBytes(files[0] + ".removed").SequenceEqual(Bytes));
+            // The state file still says removed after the restart; the mod list then offered no Install, only "Removed".
+            Check("a carried-out removal reads as not installed", ModActivation.Status(dir, id) == "Not installed" && ModActivation.Status(dir, id, false) == "Not installed");
+            Check("a removed mod still loaded this session is removed at next start", ModActivation.Status(dir, id, true) == "Removed at next start");
             ModActivation.Apply(dir, id);
             Check("install after removal is enabled", ModFiles.Install(dir, id, "3.0.0", Bytes, Array.Empty<string>()) == null && ModActivation.Status(dir, id) == "Enabled");
+            ModActivation.Queue(dir, id, "removed");
+            Check("pending removal text", ModActivation.Status(dir, id, true) == "Removed at next start" && ModActivation.Pending(dir, id, true));
+            ModActivation.Queue(dir, id, "enabled");
+            Check("enabling before the restart takes the removal back", !ModActivation.Pending(dir, id, true) && ModActivation.Status(dir, id, true) == "Enabled" && ModActivation.Files(dir, id).Count == 1);
             ModActivation.Queue(dir, id, "disabled"); ModActivation.Apply(dir, id);
             Directory.Move(ModActivation.Folder(dir, id), ModActivation.Folder(dir, id) + ".missing");
             Check("missing DLL folder retains disabled receipt and explains missing data", ModActivation.Ids(dir).Contains(id) && ModActivation.Status(dir, id).Contains("missing") && Refuses(() => ModActivation.Queue(dir, id, "enabled")));

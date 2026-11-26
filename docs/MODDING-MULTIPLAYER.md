@@ -431,7 +431,8 @@ mods without numbers. The required-mods screen shown when joining (below) keeps 
 
 Managed installs have **Disable / Enable** and **Remove** controls, including local entries when the catalog is
 offline. A row's state reads **On**, **Off**, **On at next start** or **Off at next start** (with *· update to v…*
-when the catalog has a newer version), and **Removed at next start** after **Remove**. After **Disable** or
+when the catalog has a newer version), and **Removed at next start** after **Remove**: until then **Install** takes
+the removal back, and after the restart the mod is **Not installed** and installs again as usual. After **Disable** or
 **Enable**, the message under the list gives the full
 state, as the bridge's `mods list` does: **Enabled**, **Disabled (takes effect at next start)**, **Disabled** or
 **Enabled at next start**. Hand-installed mods show **By hand** (state *On · installed by hand*) and are read-only
