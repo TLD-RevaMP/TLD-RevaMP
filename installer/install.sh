@@ -30,9 +30,9 @@ set -euo pipefail
 
 # ---- Pinned downloads. tools/pin-installer.sh rewrites this block for each release; check the hashes against the
 # ---- release page (GitHub shows each file's sha256) or against `sha256sum` of a zip you downloaded yourself.
-REVAMP_VERSION="0.69.3"
-REVAMP_URL="https://github.com/TLD-RevaMP/TLD-RevaMP/releases/download/v0.69.3/TLD-RevaMP-0.69.3.zip"
-REVAMP_SHA256="11f3af63cc8b279846f9a9206364ce260b81e4271964625acfc81b7d8d4a1f85"
+REVAMP_VERSION="0.69.4"
+REVAMP_URL="https://github.com/TLD-RevaMP/TLD-RevaMP/releases/download/v0.69.4/TLD-RevaMP-0.69.4.zip"
+REVAMP_SHA256="938b357b7c320cdfd99c08aaaedcd2d9077ed31317172863170eb616385657bf"
 BEPINEX_URL="https://github.com/BepInEx/BepInEx/releases/download/v5.4.23.5/BepInEx_win_x64_5.4.23.5.zip"
 BEPINEX_SHA256="82f9878551030f54657792c0740d9d51a09500eeae1fba21106b0c441e6732c4"
 # ---- end of pinned downloads
