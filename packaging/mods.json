@@ -264,6 +264,22 @@
           "size": 19500
         }
       ]
+    },
+    {
+      "id": "tldrevamp.raytrace",
+      "name": "RayTrace",
+      "author": "Normal99",
+      "description": "Mod that enables ray tracing to achieve true AAA slop in The Long Drive, made as a joke. We do not recommend using this mod, as it's not worth it for the performance loss. Needs Direct3D 12 (-force-d3d12) and a ray tracing graphics card.",
+      "source": "https://github.com/TLD-RevaMP/TLD-Mods/tree/main/mods/RayTrace",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "url": "https://github.com/TLD-RevaMP/TLD-Mods/releases/download/raytrace-v0.1.0/RayTrace-0.1.0.zip",
+          "file": "BepInEx/plugins/RayTrace/RayTrace.dll",
+          "sha256": "82750d95cc44b0ae9befdd8a12cc640b07b79e2d1d71a4c3dfaf6dde3cf48831",
+          "size": 130576
+        }
+      ]
     }
   ]
 }

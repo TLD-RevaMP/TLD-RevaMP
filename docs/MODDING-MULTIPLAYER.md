@@ -514,6 +514,11 @@ Road End 0.1.0 (`tldrevamp.roadend`) is a mod-only release (tag `roadend-v0.1.0`
 registers with the multiplayer API (`roadend`) and shares one session setting (`world`: the host's world has an end or
 not). It works without RevaMP too.
 
+RayTrace 0.1.0 (`tldrevamp.raytrace`) is a mod-only release (tag `raytrace-v0.1.0`), listed with its DLL's hash and
+no `revamp` baseline: it uses no RevaMP API and registers nothing with the multiplayer API, so a session never asks
+for it. Its settings are its BepInEx config, which the mods list's Settings button shows. It was made as a joke: ray
+traced effects on Direct3D 12 that cost more frame rate than they are worth.
+
 Head Unit 0.2.1, Car Trailer 0.1.2, Trailer Hitches 0.2.0, TV Browser 0.2.0 and Road End 0.2.0 are mod-only releases
 (tags `<mod>-v<version>`, for example `tvbrowser-v0.2.0`), and World Map 0.2.1 is a release of its own repository.
 Each is listed with its DLL hash in the live catalog on `dev`. New entries become installable without a RevaMP
