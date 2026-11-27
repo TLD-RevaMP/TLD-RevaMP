@@ -50,6 +50,8 @@ static partial class EntitySplitTest
         Entities.DiagMap.Remove(4); car.randoms = new List<DiagRandom> { new DiagRandom { rtipus = 2 }, null };
         car.transform.Children.Add(part.tosave); part.tosave.randoms = new List<DiagRandom> { new DiagRandom { rtipus = 7 } };
         Row("census-rows", string.Join("|", EntityDiag.CensusRows(entity)));
+        // the resync's capture time is a real stopwatch reading (0.01 ms here, more on a slow CI runner): fixed, the rows check the format
+        Entities.ResyncCaptureMsMax = 0.01; Entities.ResyncCaptureMsTotal = 0.01;
         Row("status-zero", Entities.Status(0)); Row("status-all", Entities.Status());
         // Capture detached sample values from the sampler, including the no-receipt NaN and excluded focus.
         SessionLog.History.Trace.Nets = new uint[] { 81 }; SessionLog.History.Trace.Rows.Clear();
