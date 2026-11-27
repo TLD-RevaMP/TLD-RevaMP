@@ -35,9 +35,9 @@ static class ModCatalogTest
     static int Main()
     {
         var catalog = ModCatalog.Parse(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "mods.json")));
-        Check("real catalog includes World Map, Trailer Hitches, TV Browser and Road End (Rossa88 withdrawn)", catalog.Mods.Count == 9 &&
+        Check("real catalog includes World Map, Trailer Hitches, TV Browser, Road End and RayTrace (Rossa88 withdrawn)", catalog.Mods.Count == 10 &&
             catalog.Mods[0].Versions[0].Version == "0.4.0" && catalog.Mods[1].Versions[0].Version == "0.1.2" &&
-            catalog.Mods[2].Id == "anonymoustld.busgut" && catalog.Mods[3].Id == "anonymoustld.mountanything" && catalog.Mods[4].Id == "anonymoustld.terrainchoice" && catalog.Mods[5].Id == "tldrevamp.worldmap" && catalog.Mods[6].Id == "tldrevamp.trailerhitches" && catalog.Mods[7].Id == "tldrevamp.tvbrowser" && catalog.Mods[8].Id == "tldrevamp.roadend" && !catalog.Mods.Exists(m => m.Id == "anonymoustld.rossa88"));
+            catalog.Mods[2].Id == "anonymoustld.busgut" && catalog.Mods[3].Id == "anonymoustld.mountanything" && catalog.Mods[4].Id == "anonymoustld.terrainchoice" && catalog.Mods[5].Id == "tldrevamp.worldmap" && catalog.Mods[6].Id == "tldrevamp.trailerhitches" && catalog.Mods[7].Id == "tldrevamp.tvbrowser" && catalog.Mods[8].Id == "tldrevamp.roadend" && catalog.Mods[9].Id == "tldrevamp.raytrace" && !catalog.Mods.Exists(m => m.Id == "anonymoustld.rossa88"));
         Check("HeadUnit valid in catalog", ModCatalog.ApprovalReason(catalog.Mods[0], catalog.Mods[0].Versions[0], 16 << 20, _ => true) == null);
         Check("CarTrailer released DLL valid in catalog", ModCatalog.ApprovalReason(catalog.Mods[1], catalog.Mods[1].Versions[0], 16 << 20, _ => true) == null);
         for (int i = 2; i < catalog.Mods.Count; i++)
