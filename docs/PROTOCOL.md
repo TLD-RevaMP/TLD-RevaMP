@@ -12,12 +12,14 @@ The number changes once between public releases, not with every wire change:
 - Two dev builds can't join each other anyway: the join check compares the source commit, and a build with local
   changes needs the identical DLL (`Net/BuildCheck.cs`). So the number protects nobody between dev builds.
 
-The public release v0.69.1 carries 28; v0.69.2 and v0.69.3 carry 62. The numbers from 29 to 61 were raised on dev, one per
+The public release v0.69.1 carries 28; v0.69.2 and v0.69.3 carry 62; v0.69.4 carries 63. The numbers from 29 to 61 were raised on dev, one per
 change, before this rule.
 
 ## History
 
 ## 63
+
+Released in v0.69.4.
 
 - the session's Hardcore switch appended to the settings snapshot, after the voice byte (`SessionSettingsSnapshot.Hardcore`)
 - replayed mod edits (`SharedType.ReplayEdits`, API 6): ModEdited (114) carries an edit the owner accepted to every copy, with the record's version, the edit's time and a hash of the owner's record; ModResync (115) asks for the whole record (from the host to the owner it ends with a kind: send your record, or the history a new owner asked for ends here). ModRecord and ModAdd end with the record's version (u32) (`Net/EditChain.cs`)

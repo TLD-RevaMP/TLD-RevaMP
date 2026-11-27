@@ -14,7 +14,7 @@ body:
     attributes:
       label: TLD RevaMP version
       description: The version in the release zip's name. Everyone in a session needs the same one.
-      placeholder: "0.69.3"
+      placeholder: "0.69.4"
     validations:
       required: true
   - type: dropdown
