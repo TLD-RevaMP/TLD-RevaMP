@@ -46,21 +46,101 @@ namespace TLDRevamp
         }
 
         static partial void ItemCount(ref int count) { var db = itemdatabase.s; count = db != null && db.items != null ? db.items.Length : 0; }
-        /// The items a mod's DbLoad appended (places from `from` on): each its place as its tosaveitemscript.id. A game
-        /// prefab a mod lists again, or one it lists twice, keeps the id of its first place.
-        static partial void NumberAppended(int from)
+        /// TLD Loader's registry places (TLDLoader.ItemSlots.First/Count in the stub; here too for a game with no Loader mod
+        /// left, whose saves can still hold their items).
+        private const int RegistryFirst = 16384, RegistryEnd = 32768;
+        private static Func<string, string, int, int> _assignAppended;
+        /// The end of the table as the numbering before 2026-11-27 had it (each mod's items at the end, one mod after the
+        /// other), and where each item it placed there is now: a save from then keeps loading. (A mod that also registers
+        /// items through TLD Loader in the same DbLoad can make it wrong for the mods after it.)
+        private static int _oldEnd = -1;
+        private static readonly Dictionary<int, int> _oldPlaces = new Dictionary<int, int>();
+        private static readonly HashSet<int> _missingTold = new HashSet<int>();
+
+        static partial void AppendedReset() { _oldPlaces.Clear(); _oldEnd = -1; }
+
+        /// The items a mod's DbLoad appended (places from `from` on). Each moves to its registry place (StableAppendedItems:
+        /// TLDLoader.ItemSlots.AssignAppended, by the mod's ID, the item's name and how many of that name came before it) and
+        /// that place is its tosaveitemscript.id; the end of the table is as it was before the mod's DbLoad, but for items
+        /// TLD Loader's RegisterItem placed there. A game prefab a mod lists again, or one it lists twice, keeps its first
+        /// place. No workshop mod remembers where its items went in the table (2026-11-27: they find them by component).
+        static partial void NumberAppended(int from, string modId)
         {
             var db = itemdatabase.s;
-            if (db == null || db.items == null || from >= db.items.Length) return;
+            if (db == null || db.items == null) return;
+            if (_oldEnd < 0) _oldEnd = from;
+            int oldFrom = _oldEnd;
+            if (from >= db.items.Length) return;
+            _oldEnd = oldFrom + (db.items.Length - from);
             var earlier = new HashSet<GameObject>();
             for (int i = 0; i < from; i++) if (db.items[i] != null) earlier.Add(db.items[i]);
+            if (!StableAppendedItems || _assignAppended == null)
+            {
+                for (int i = from; i < db.items.Length; i++)
+                {
+                    var go = db.items[i];
+                    if (go == null || ReferenceEquals(go, _slotPlaceholder) || !earlier.Add(go)) continue;
+                    var t = go.GetComponent<tosaveitemscript>();
+                    if (t == null || t.id == i) continue;
+                    t.id = i; AppendedItemsNumbered++;
+                }
+                return;
+            }
+            var names = new Dictionary<string, int>();
+            var moved = new List<KeyValuePair<int, GameObject>>();
+            int end = from;
             for (int i = from; i < db.items.Length; i++)
             {
                 var go = db.items[i];
-                if (go == null || ReferenceEquals(go, _slotPlaceholder) || !earlier.Add(go)) continue;
-                var t = go.GetComponent<tosaveitemscript>();
-                if (t == null || t.id == i) continue;
-                t.id = i; AppendedItemsNumbered++;
+                if (go == null || ReferenceEquals(go, _slotPlaceholder)) continue;
+                if (LoaderCompat.SlotKey != null && LoaderCompat.SlotKey(i, out _, out _)) { end = i + 1; continue; }   // RegisterItem's
+                if (!earlier.Add(go)) continue;
+                names.TryGetValue(go.name, out int n); names[go.name] = n + 1;
+                int slot = _assignAppended(modId, go.name, n);
+                moved.Add(new KeyValuePair<int, GameObject>(slot, go));
+                _oldPlaces[oldFrom + (i - from)] = slot;
+            }
+            int length = end;
+            foreach (var kv in moved) length = Math.Max(length, kv.Key + 1);
+            var items = new GameObject[length];
+            Array.Copy(db.items, items, from);
+            for (int i = from; i < end; i++) if (LoaderCompat.SlotKey != null && LoaderCompat.SlotKey(i, out _, out _)) items[i] = db.items[i];
+            foreach (var kv in moved)
+            {
+                items[kv.Key] = kv.Value;
+                var t = kv.Value.GetComponent<tosaveitemscript>();
+                if (t != null) t.id = kv.Key;
+                AppendedItemsMoved++;
+            }
+            db.items = items;
+        }
+
+        /// A saved item comes back from its place in the item table (savedatascript.SpawnItem: itemdatabase.Item(prefabID),
+        /// the game's error item when the place is empty, and a save then keeps the error item's id: the item is lost for
+        /// good). One at a place of the numbering before 2026-11-27 comes from that item's place now. One at an empty registry
+        /// place (its mod not loaded) is still the error item but keeps its place, so it saves as it was and comes back when
+        /// the mod does. The idea of keeping it is Roadworthy's (TldModItems' placeholders, MIT,
+        /// github.com/jaylikesbunda/TheLongDrive-Roadworthy); the code is RevaMP's.
+        [HarmonyLib.HarmonyPatch(typeof(savedatascript), nameof(savedatascript.SpawnItem), new[] { typeof(save_item) })]
+        private static class SavedPlaces
+        {
+            private static void Prefix(save_item _value, out int __state)
+            {
+                __state = -1;
+                var db = itemdatabase.s;
+                if (!StableAppendedItems || _value == null || db == null || db.CheckType(_value.prefabID)) return;
+                if (_oldPlaces.TryGetValue(_value.prefabID, out int now) && db.CheckType(now)) { _value.prefabID = now; OldPlacesMapped++; return; }
+                if (_value.prefabID >= RegistryFirst && _value.prefabID < RegistryEnd) __state = _value.prefabID;
+            }
+
+            private static void Postfix(GameObject __result, int __state)
+            {
+                if (__state < 0 || __result == null) return;
+                var t = __result.GetComponent<tosaveitemscript>();
+                var error = itemdatabase.s?.gerror?.GetComponent<tosaveitemscript>();
+                if (t == null || error == null || t.id != error.id) return;   // the map placed one of its own instead
+                t.id = __state; MissingModItemsKept++;
+                if (_missingTold.Add(__state)) Plugin.Log.LogInfo("ModHost: a saved item at place " + __state + " has no prefab (its mod isn't loaded): the error item stands in and keeps its place");
             }
         }
 
@@ -89,6 +169,10 @@ namespace TLDRevamp
                 var find = slots?.GetMethod("Find", BindingFlags.Public | BindingFlags.Static);
                 if (key != null) LoaderCompat.SlotKey = (LoaderCompat.SlotKeyLookup)Delegate.CreateDelegate(typeof(LoaderCompat.SlotKeyLookup), key);
                 if (find != null) LoaderCompat.SlotOf = (Func<int, int, int>)Delegate.CreateDelegate(typeof(Func<int, int, int>), find);
+                var appended = slots?.GetMethod("AssignAppended", BindingFlags.Public | BindingFlags.Static);
+                if (appended != null) _assignAppended = (Func<string, string, int, int>)Delegate.CreateDelegate(typeof(Func<string, string, int, int>), appended);
+                int first = Convert.ToInt32(slots?.GetField("First")?.GetRawConstantValue() ?? RegistryFirst), count = Convert.ToInt32(slots?.GetField("Count")?.GetRawConstantValue() ?? RegistryEnd - RegistryFirst);
+                if (first != RegistryFirst || first + count != RegistryEnd) Plugin.Log.LogWarning("ModHost: TLD Loader's registry places are " + first + ".." + (first + count) + ", ModHost's " + RegistryFirst + ".." + RegistryEnd);
             }
             catch (Exception e) { Plugin.Log.LogWarning("ModHost: TLD Loader's object and item registry: " + (e.InnerException ?? e).Message); }
         }

@@ -292,9 +292,15 @@ namespace TLDRevamp
         /// and loads the prefab at that place in the table (a snowman mod's parts came back as other items after a reload).
         /// After each mod's DbLoad, what it appended gets its place as its id (ModHost.Game.cs). A/B: false = before 2026-11-25.
         public static bool NumberAppendedItems = true;
-        public static int AppendedItemsNumbered;
+        /// ... and that place is one of TLD Loader's registry (TLDLoader.ItemSlots.AssignAppended) by the mod's ID and the
+        /// item's name, not the end of the table, which moved with every other mod that came or went. A save from before
+        /// keeps loading (its old places are mapped), and a saved item whose mod is gone keeps its place (ModHost.Game.cs).
+        /// A/B: false = before 2026-11-27.
+        public static bool StableAppendedItems = true;
+        public static int AppendedItemsNumbered, AppendedItemsMoved, OldPlacesMapped, MissingModItemsKept;
         static partial void ItemCount(ref int count);
-        static partial void NumberAppended(int from);
+        static partial void NumberAppended(int from, string modId);
+        static partial void AppendedReset();
 
         /// The stub's ModLoader.HostDbLoad: the mods' DbLoad starts (fresh: for a new item database) or has ended. TLD Loader
         /// 3.0.3 takes RegisterItem only in between, and mods ask it (its dbmodsloaded) whether they are in DbLoad.
@@ -346,13 +352,14 @@ namespace TLDRevamp
                 // here in the menu, the rest of its DbLoad not done. Before 2026-11-24 it stayed that way.
                 bool noWorld = mainscript.s == null || mainscript.s.player == null;
                 DbLoadMark(true, true);   // a new database: TLD Loader 3.0.3's registry starts empty, its items come again
+                AppendedReset();
                 try
                 {
                     foreach (var l in order)
                     {
                         int before = 0; ItemCount(ref before);
                         bool ok = Call(l, l.DbLoad, "DbLoad") & Call(l, l.DbLoadOld, "dbLoad");
-                        if (NumberAppendedItems) NumberAppended(before);
+                        if (NumberAppendedItems) NumberAppended(before, l.Id);
                         // a registered item makes the table longer (TLDLoader.ItemSlots): the next mods see no empty slots there either
                         if (FillEmptySlots) FillHoles();
                         l.DbLoadInWorld = !ok && noWorld && DbLoadAgainInWorld;
@@ -423,7 +430,7 @@ namespace TLDRevamp
                             bool ok; int before = 0; ItemCount(ref before);
                             try { ok = Call(l, l.DbLoad, "DbLoad") & Call(l, l.DbLoadOld, "dbLoad"); }
                             finally { DbLoadMark(false, false); }
-                            if (NumberAppendedItems) NumberAppended(before);
+                            if (NumberAppendedItems) NumberAppended(before, l.Id);
                             if (FillEmptySlots) FillHoles();
                             Plugin.Log.LogInfo("ModHost: " + l.Id + " DbLoad again in the world" + (ok ? "" : ": it threw again"));
                             if (ok) l.LastError = null;

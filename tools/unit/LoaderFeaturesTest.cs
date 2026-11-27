@@ -224,6 +224,23 @@ static class LoaderFeaturesTest
         Check("two items whose hashes collide (" + x + ", " + y + ") both get a place, the second the next one", Hash(modB, x) == Hash(modB, y) && px != py && py == first + (px - first + 1) % count);
         Clear();
 
+        // items a mod puts in the table itself (ModHost moves them here, by mod ID, name and how many of that name before)
+        var appended = slots.GetMethod("AssignAppended");
+        int Appended(string mod, string name, int n) => (int)appended.Invoke(null, new object[] { mod, name, n });
+        int s1 = Appended("example.snow", "Snowman", 0), s2 = Appended("example.snow", "Snowman", 1), s3 = Appended("example.nitro", "Snowman", 0);
+        int r1 = Assign(modA, 1);
+        Check("an appended item gets a place in the range, each its own (another of that name, another mod's of that name, a registered one)",
+              new[] { s1, s2, s3 }.All(v => v >= first && v < first + count) && new[] { s1, s2, s3, r1 }.Distinct().Count() == 4);
+        Check("asking again gives the same place", Appended("example.snow", "Snowman", 0) == s1);
+        Check("an appended item's place is not a registered item's (a mod reads its id there as it is)", !Key(s1).Item1 && Key(r1).Item1);
+        Clear();
+        int t3 = Appended("example.nitro", "Snowman", 0), r2 = Assign(modA, 1), t1 = Appended("example.snow", "Snowman", 0), t2 = Appended("example.snow", "Snowman", 1);
+        Check("the same places in another session, with the mods in another order", t1 == s1 && t2 == s2 && t3 == s3 && r2 == r1);
+        Clear();
+        int u1 = Appended("example.snow", "Snowman", 0);
+        Check("the same place without the other mods (another mod coming or going moves nothing)", u1 == s1 && !Key(u1).Item1);
+        Clear();
+
         // the members mods built on TLD Loader 3.0.3 bind to, as they reference them (a missing one is a
         // MissingMethodException when the mod's method runs: before 2026-11-24, get_Instance, and nothing was registered)
         using var m = Mono.Cecil.ModuleDefinition.ReadModule(stubFile);

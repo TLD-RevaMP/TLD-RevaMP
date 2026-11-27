@@ -48,6 +48,9 @@ src/TLDRevamp/ModHost.Game.cs	.GetMethod("HostMakeInstance", BindingFlags.NonPub
 src/TLDRevamp/ModHost.Game.cs	stub.GetType("TLDLoader.ItemSlots")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
 src/TLDRevamp/ModHost.Game.cs	.GetMethod("TryKey", BindingFlags.Public | BindingFlags.Static)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
 src/TLDRevamp/ModHost.Game.cs	.GetMethod("Find", BindingFlags.Public | BindingFlags.Static)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	.GetMethod("AssignAppended", BindingFlags.Public | BindingFlags.Static)	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	.GetField("First")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
+src/TLDRevamp/ModHost.Game.cs	.GetField("Count")	TLD Loader/mod compatibility API or external mod patch class; not a fixed game member.
 src/TLDRevamp/ScriptProfiler.cs	type.GetMethod(owner == SetCoarse ? "PrefixCoarse" : alloc ? "PrefixAlloc" : "Prefix")	Our profiler prefix/postfix methods; not game code.
 src/TLDRevamp/ScriptProfiler.cs	type.GetMethod(owner == SetCoarse ? "PostfixCoarse" : alloc ? "PostfixAlloc" : "Postfix")	Our profiler prefix/postfix methods; not game code.
 src/TLDRevamp/ScriptProfiler.cs	GameLookups.RuntimeMethod(type, name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly, Type.EmptyTypes)	Profiler discovers callbacks and compiler-generated iterator classes at runtime; not a required game member on every scanned type.

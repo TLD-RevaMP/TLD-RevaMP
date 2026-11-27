@@ -44,7 +44,9 @@ namespace TLDLoader
         }
 
         /// The item's place, given it now if it has none.
-        public static int Assign(int category, int id)
+        public static int Assign(int category, int id) => Assign(category, id, true);
+
+        private static int Assign(int category, int id, bool registered)
         {
             long key = Key(category, id);
             if (_slots.TryGetValue(key, out int slot)) return slot;
@@ -52,8 +54,28 @@ namespace TLDLoader
             int h = Hash(category, id);
             while (_keys.ContainsKey(First + h)) h = (h + 1) % Count;
             slot = First + h;
-            _slots[key] = slot; _keys[slot] = key; _categories.Add(category);
+            _slots[key] = slot; _keys[slot] = key;
+            if (registered) _categories.Add(category); else _appended.Add(slot);
             return slot;
+        }
+
+        /// Items a mod puts in the item table itself (`items = items.Append(x).ToArray()`), not through RegisterItem: ModHost
+        /// moves each to a place here after the mod's DbLoad, by the mod's ID, the item's name and how many of that name the
+        /// mod added before it. At the end of the table their places moved whenever another mod came or went, and a save
+        /// keeps an item by its place (a snowman mod's parts came back as another mod's items). Not a registered item's place
+        /// (TryKey says no), so a mod reads the item's id there as it is. The idea of a hashed, mod-keyed id is Roadworthy's
+        /// (TldLoaderCompatPolicy.ModItemId, MIT, github.com/jaylikesbunda/TheLongDrive-Roadworthy); the code is RevaMP's.
+        private const int AppendedCategory = 0x41505044;   // "APPD": no mod's (an FNV-1 of its ID) in practice
+        private static readonly HashSet<int> _appended = new HashSet<int>();
+
+        public static int AssignAppended(string modId, string name, int ordinal)
+        {
+            unchecked
+            {
+                uint h = 2166136261;
+                foreach (char c in (modId ?? "") + "\n" + (name ?? "") + "#" + ordinal) { h ^= (byte)c; h *= 16777619; h ^= (byte)(c >> 8); h *= 16777619; }
+                return Assign(AppendedCategory, (int)(h | 0x80000000u), false);
+            }
         }
 
         /// The item's place, or -1 when it has none.
@@ -63,7 +85,7 @@ namespace TLDLoader
         public static bool TryKey(int slot, out int category, out int id)
         {
             category = 0; id = 0;
-            if (slot < First || slot >= First + Count || !_keys.TryGetValue(slot, out long key)) return false;
+            if (slot < First || slot >= First + Count || _appended.Contains(slot) || !_keys.TryGetValue(slot, out long key)) return false;
             category = (int)(key >> 32); id = (int)(key & 0xffffffffL);
             return true;
         }
@@ -72,7 +94,7 @@ namespace TLDLoader
         public static int Assigned => _slots.Count;
 
         /// A new item database: the mods register again, in the same order, and get the same places.
-        public static void Clear() { _slots.Clear(); _keys.Clear(); _categories.Clear(); }
+        public static void Clear() { _slots.Clear(); _keys.Clear(); _categories.Clear(); _appended.Clear(); }
     }
 
     /// TLD Loader 3.0.3's FNV-1 (Mod.Category is this of the mod's ID).

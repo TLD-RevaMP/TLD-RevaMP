@@ -366,7 +366,11 @@ item gets a place from 16384 up, by a hash of its mod's category and its id, the
 (TLDLoader.ItemSlots), and its tosaveitemscript.id is that place: the game saves, loads and spawns it as its own. The mod
 reads and writes its own numbers: its tosaveitemscript.id and .category go to LoaderCompat.ItemId/ItemCategory (the beta
 has no category; for other items they are as before). The registry is emptied for each new item database and the mods
-register again, in the same order, to the same places. Not there: WithCondition, AsPart, SpawnAt and SpawnInBox (no
+register again, in the same order, to the same places. An item a mod puts in the table itself (appending to
+itemdatabase.items in DbLoad) is moved to a place of the same range after that mod's DbLoad, by the mod's ID, the
+item's name and how many of that name the mod added before it, so its place doesn't change when another mod comes or
+goes. A saved item whose place has no prefab (its mod isn't loaded) comes back as the game's error item but keeps its
+place, so it saves unchanged and is itself again once the mod is back. Not there: WithCondition, AsPart, SpawnAt and SpawnInBox (no
 known mod calls them) and 3.0.3's patches of the public game's lookups by category. DbLoad runs
 for every mod with LoadInDB once per item database, in the order of the mods' IDs, so every machine changes and adds
 items the same way. That holds only when every player has the same TLD Loader mods: a host refuses a joiner whose mods differ by
