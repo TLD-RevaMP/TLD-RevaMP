@@ -35,6 +35,8 @@ namespace TLDRevamp
         public static int WorldsReplaced;
         public static string Info = "not started";
         public static int DbLoadRuns;
+        /// Whether any TLD Loader mod is loaded (LoaderCompat's per-frame work is for theirs only).
+        internal static bool AnyLoaderMods => Mods.Count > 0;
         private static itemdatabase _dbFor;
         private static object _aliasM, _aliasD, _aliasSd;
 

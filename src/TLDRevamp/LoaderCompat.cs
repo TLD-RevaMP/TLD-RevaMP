@@ -866,9 +866,10 @@ namespace TLDRevamp
         {
             private static void Prefix(fpscontroller __instance)
             {
+                LoadLateGlue();
                 if (!StartLateAttachables || __instance == null) return;
                 var p = __instance.pickedUp;
-                if (p == null) return;
+                if (p == null) { StartLookedAt(__instance); return; }
                 StartLatePickup(p);
                 if (p.tosave == null) return;
                 var a = p.tosave.attachable;
@@ -911,12 +912,75 @@ namespace TLDRevamp
             catch (System.Exception e) { Diagnostics.QuietErrors.Once("LoaderCompat.StartLatePickup", e); }
         }
 
+        /// The item the player looks at (the game's own pickup ray: fpscontroller.RayStuff): a late pickup component starts
+        /// before the game's pickup gates read it. They read its save (tosave, which only its start sets) before they ask
+        /// CanPickup: a mod's nitrous gauge could never be picked up with the start in CanPickup alone (2026-11-27).
+        private static void StartLookedAt(fpscontroller pl)
+        {
+            var cam = pl.Cam;
+            if (!ModHost.AnyLoaderMods || cam == null || !Physics.Raycast(cam.transform.position, cam.transform.forward, out var hit, pl.FrayRange, pl.pickupLayer)) return;
+            var lp = hit.collider.GetComponentInParent<pickupable>();
+            if (lp != null && !lp.started) StartLatePickup(lp);
+        }
+
         /// The game asks CanPickup when the player looks at an item: a mod's late pickup component starts there, so the
         /// gates of the pickup itself read a started one.
         [HarmonyLib.HarmonyPatch(typeof(pickupable), nameof(pickupable.CanPickup))]
         private static class StartLookedPickup
         {
             private static void Prefix(pickupable __instance) { if (StartLateAttachables && __instance != null && !__instance.started) StartLatePickup(__instance); }
+        }
+
+        /// An item saved glued (to a car, a wall) whose mount component a mod adds when the item starts (a mount-everything mod,
+        /// a nitrous bottle that copies one): the save has the glue, but the game loads it only into a mount the item has when
+        /// it is loaded (savedatascript.LoadStuff), and it had none yet: after each reload the item lay loose (2026-11-27). The
+        /// saved glue waits for the mod's mount and is loaded into it then, as the game loads its own (save_attachable.Load).
+        /// A/B: false = before 2026-11-27.
+        public static bool LoadLateAttachments = true;
+        public static int LateAttachmentsLoaded, LateGlueWaited;
+        private sealed class LateGlue { public tosaveitemscript Item; public save_attachable Saved; public int Tries; }
+        private static readonly List<LateGlue> _lateGlue = new List<LateGlue>();
+        [HarmonyLib.HarmonyPatch(typeof(savedatascript), nameof(savedatascript.LoadStuff), new[] { typeof(savedata), typeof(uint), typeof(bool) })]
+        private static class RememberLateGlue
+        {
+            // before: the load removes the item's saved data at its end (itemData.RemoveID)
+            private static void Prefix(savedatascript __instance, savedata _data, uint _key, out save_attachable __state)
+            {
+                __state = null;
+                if (!LoadLateAttachments || __instance == null || __instance.items == null || _data == null || _data.itemData == null || _data.itemData.attachable == null) return;
+                if (!__instance.items.TryGetValue(_key, out var t) || t == null || t.loaded) return;
+                foreach (var g in _data.itemData.attachable)
+                    if (g != null && g.id == _key && g.attachType != 0) { __state = g.Copy(); return; }
+            }
+            private static void Postfix(savedatascript __instance, uint _key, save_attachable __state)
+            {
+                if (__state == null || !__instance.items.TryGetValue(_key, out var t) || t == null || !t.loaded || t.attachable != null) return;
+                _lateGlue.Add(new LateGlue { Item = t, Saved = __state }); LateGlueWaited++;
+            }
+        }
+        /// Per frame while any wait: an item gone (another world) is let go; one whose mount came is glued with its saved glue
+        /// (its pickup component started first, as the glue goes through it); what it was glued to may load a moment later,
+        /// so a few more frames are tried before it stays loose.
+        internal static void LoadLateGlue()
+        {
+            if (_lateGlue.Count == 0) return;
+            for (int i = _lateGlue.Count - 1; i >= 0; i--)
+            {
+                var g = _lateGlue[i]; var t = g.Item;
+                if (t == null) { _lateGlue.RemoveAt(i); continue; }
+                var a = t.attachable;
+                if (a == null) continue;
+                try
+                {
+                    var p = t.P != null ? t.P : t.GetComponent<pickupable>();
+                    if (p != null) StartLatePickup(p);
+                    if (!a.started) StartLate(a, t);
+                    if (!a.attached) g.Saved.Load(a);
+                }
+                catch (System.Exception e) { Diagnostics.QuietErrors.Once("LoaderCompat.LoadLateGlue", e); g.Tries = 1000; }
+                if (a.attached) { LateAttachmentsLoaded++; _lateGlue.RemoveAt(i); }
+                else if (++g.Tries > 300) _lateGlue.RemoveAt(i);
+            }
         }
 
         internal static void StartLate(attachablescript a, tosaveitemscript save)
