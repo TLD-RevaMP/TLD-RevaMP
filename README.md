@@ -26,46 +26,13 @@ You also need the **same RevaMP version** as everyone else in a session. If two 
 game will say so and refuse the join. That is on purpose: two different builds would each see a slightly different
 world.
 
-## Installing it (the easy way)
+## Installing it
 
-The **Releases** page has everything you need:
-<https://github.com/TLD-RevaMP/TLD-RevaMP/releases>
+The **Releases** page has the zip: <https://github.com/TLD-RevaMP/TLD-RevaMP/releases>
 
-### Windows
-
-1. Download **`install.ps1`** from the release page.
-2. Right-click it → **Run with PowerShell**.
-3. It asks what you want to do: **install or update**, **repair**, or **uninstall**. Pick *Install or update*.
-4. It shows you exactly what it will download (with a checksum for each file) and asks once before it changes
-   anything. Say yes.
-5. If the game is somewhere unusual, run the installer from a PowerShell window and give it the folder with
-   `-GameDir` (`powershell -ExecutionPolicy Bypass -File .\install.ps1 -GameDir "<game folder>"`), or install from
-   zips you already downloaded with `-From <folder>`. If it says the game is running, close the game and run it
-   again. If it says the SHA-256 does not match, the file you downloaded is not the one this installer was written
-   for: download it again.
-
-### Linux and Steam Deck
-
-1. Download **`install.sh`** from the release page.
-2. Open a terminal and run `bash install.sh`. On the Steam Deck, use Desktop Mode. If the game is somewhere
-   unusual, run `bash install.sh --game-dir "<game folder>"`; to install from zips you already downloaded, add
-   `--from <folder>`.
-3. Same menu as Windows: **install or update**, **repair**, or **uninstall**.
-
-### What the installer does, in one paragraph
-
-It finds your game through Steam's own list of libraries, downloads the mod (and the BepInEx loader it needs) and
-checks each download against a checksum written into the script, so a wrong or corrupted file stops the install
-before anything changes. Then it copies the files into your game folder, saves a backup of anything it replaces, and
-on Linux also tells Proton to load the right `winhttp.dll` for this game only. It never touches your saves, your
-settings or other games, and it needs no administrator or root rights.
-
-### If you would rather do it by hand
-
-Download the **`TLD-RevaMP-<version>.zip`** from the same page and unpack it into your game folder (Steam → right-click
+Download the **`TLD-RevaMP-<version>.zip`** and unpack it into your game folder (Steam → right-click
 *The Long Drive* → **Manage** → **Browse local files** shows you where that is). `winhttp.dll` has to end up next to
-`TheLongDrive.exe`. On Linux and the Steam Deck you also need this launch option, unless the installer set it for
-you:
+`TheLongDrive.exe`. On Linux and the Steam Deck you also need this launch option:
 
 ```
 WINEDLLOVERRIDES="winhttp=n,b" %command%
@@ -81,14 +48,48 @@ Start the game. Its main menu has a **Mods** button between Settings and Exit: t
 
 ### Updating later
 
-Download the new release and run its installer again, choosing *Install or update*. Or close the game and copy the
-new zip's files over the old ones. Your saves and settings stay where they are. **Tell everyone in your session to
-update too** — you cannot join each other across versions.
+Close the game and copy the new release zip's files over the old ones. Your saves and settings stay where they
+are. **Tell everyone in your session to update too** — you cannot join each other across versions.
 
 ### Removing it
 
-Run the installer and choose *Uninstall*. It removes exactly the files it added and puts back the ones it replaced.
-Your RevaMP settings, logs and reports stay behind on purpose.
+Close the game and delete `BepInEx/plugins/TLDRevamp`, `BepInEx/patchers/TLDRevamp` and `BepInEx/plugins/TLDRevampMods`
+from the game folder. If no other mod uses BepInEx, delete `winhttp.dll`, `doorstop_config.ini`, `.doorstop_version`,
+`changelog.txt` and the `BepInEx` folder too, and on Linux remove the launch option.
+
+### The install scripts (left out of the releases for now)
+
+The releases don't include the install scripts at the moment: they haven't been tested again yet. Their source is in
+`installer/` and this is what they do.
+
+#### Windows
+
+1. Download **`install.ps1`** from the release page.
+2. Right-click it → **Run with PowerShell**.
+3. It asks what you want to do: **install or update**, **repair**, or **uninstall**. Pick *Install or update*.
+4. It shows you exactly what it will download (with a checksum for each file) and asks once before it changes
+   anything. Say yes.
+5. If the game is somewhere unusual, run the installer from a PowerShell window and give it the folder with
+   `-GameDir` (`powershell -ExecutionPolicy Bypass -File .\install.ps1 -GameDir "<game folder>"`), or install from
+   zips you already downloaded with `-From <folder>`. If it says the game is running, close the game and run it
+   again. If it says the SHA-256 does not match, the file you downloaded is not the one this installer was written
+   for: download it again.
+
+#### Linux and Steam Deck
+
+1. Download **`install.sh`** from the release page.
+2. Open a terminal and run `bash install.sh`. On the Steam Deck, use Desktop Mode. If the game is somewhere
+   unusual, run `bash install.sh --game-dir "<game folder>"`; to install from zips you already downloaded, add
+   `--from <folder>`.
+3. Same menu as Windows: **install or update**, **repair**, or **uninstall**.
+
+#### What the installer does, in one paragraph
+
+It finds your game through Steam's own list of libraries, downloads the mod (and the BepInEx loader it needs) and
+checks each download against a checksum written into the script, so a wrong or corrupted file stops the install
+before anything changes. Then it copies the files into your game folder, saves a backup of anything it replaces, and
+on Linux also tells Proton to load the right `winhttp.dll` for this game only. It never touches your saves, your
+settings or other games, and it needs no administrator or root rights.
 
 ## Your first multiplayer session
 

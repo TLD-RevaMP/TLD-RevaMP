@@ -379,7 +379,9 @@ Source builds deploy two BepInEx plugins: `TLDRevamp.dll` runs the game features
 ## Release model
 
 - **Releases** are published from `main` as a GitHub release with the version tag `v<version>`. The assets are the
-  mod zip (`TLD-RevaMP-<version>.zip`, the player edition), the two installer scripts and a `SHA256SUMS` file. The
+  mod zip (`TLD-RevaMP-<version>.zip`, the player edition) and a `SHA256SUMS` file. The two installer scripts are left
+  out of the releases for now (from 0.69.4, until they are tested again); they are still pinned to each release, and
+  CI still runs them against it. The
   add-ons are not attached: they are released in [TLD-Mods](https://github.com/TLD-RevaMP/TLD-Mods) (World Map in its
   own repository) and installed from the mod list. The installers pinned to that release are committed in the same
   change.
