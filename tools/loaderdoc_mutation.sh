@@ -52,7 +52,7 @@ copy_tree() {
     mkdir -p "$WORK/src/TLDRevamp.Dev"
     cp "$ROOT/src/TLDRevamp.Dev/LoaderScan.cs" "$ROOT/src/TLDRevamp.Dev/DevPlugin.cs" "$WORK/src/TLDRevamp.Dev/"
     mkdir -p "$WORK/src/TLDRevamp" "$WORK/src/TLDRevamp/Net" "$WORK/src/TLDLoaderShim" "$WORK/docs"
-    cp "$ROOT/src/TLDRevamp/ModHost.cs" "$ROOT/src/TLDRevamp/Plugin.cs" \
+    cp "$ROOT/src/TLDRevamp/ModHost.cs" "$ROOT/src/TLDRevamp/ModHost.Settings.cs" "$ROOT/src/TLDRevamp/Plugin.cs" "$ROOT/src/TLDRevamp/ModGuiRunner.cs" \
        "$ROOT/src/TLDRevamp/Overlay.cs" "$ROOT/src/TLDRevamp/FeedbackReporter.cs" "$WORK/src/TLDRevamp/"
     cp "$ROOT/src/TLDRevamp/Net/Voice.cs" "$ROOT/src/TLDRevamp/Net/ModCatalog.cs" "$ROOT/src/TLDRevamp/Net/ModActivation.cs" \
        "$ROOT/src/TLDRevamp/Net/JoinLoading.cs" "$ROOT/src/TLDRevamp/Net/JoinLoadingView.cs" "$ROOT/src/TLDRevamp/Net/JoinLoadingState.cs" "$ROOT/src/TLDRevamp/Net/JoinChecks.cs" "$ROOT/src/TLDRevamp/Net/MpScreen.cs" \
