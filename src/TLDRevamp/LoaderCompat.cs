@@ -835,6 +835,43 @@ namespace TLDRevamp
             private static void Prefix(attachablescript p) { if (p != null && p.T == null) p.T = p.transform; }
         }
 
+        /// A mount component (attachablescript) a mod gave an item after the item started: the beta sets one up only in the
+        /// item's start (FStart: its transform, its save, its body), so one added later stayed empty - a mount-everything
+        /// mod copies another item's component field by field from its prefab, which never started either. Held, the game
+        /// sets its collision every frame through its save (SetCollider: tosave.P), which threw: the player's Update
+        /// stopped every frame, the hand and the look froze (issue 44, 2026-11-27: items another mod had changed, the ones
+        /// without a mount component of their own). Such a component is set up as the beta sets up its own, as RevaMP's
+        /// mount mod does for an item it makes glueable. Nothing changes for one that started. A/B: false = before 2026-11-27.
+        public static bool StartLateAttachables = true;
+        public static int LateAttachablesStarted;
+        [HarmonyLib.HarmonyPatch(typeof(fpscontroller), "Update")]
+        private static class StartHeldAttachable
+        {
+            private static void Prefix(fpscontroller __instance)
+            {
+                if (!StartLateAttachables || __instance == null) return;
+                var p = __instance.pickedUp;
+                if (p == null || p.tosave == null) return;
+                var a = p.tosave.attachable;
+                if (a == null || a.started) return;
+                StartLate(a, p.tosave);
+            }
+        }
+        internal static void StartLate(attachablescript a, tosaveitemscript save)
+        {
+            try
+            {
+                if (a.T == null) a.T = a.transform;
+                if (a.tosave == null) a.tosave = save;
+                if (a.RB == null) a.RB = a.GetComponent<Rigidbody>();
+                if (a.tipus == null) a.tipus = new string[0];
+                if (a.maintipus == null) a.maintipus = new string[0];
+                a.FStart();
+                LateAttachablesStarted++;
+            }
+            catch (System.Exception e) { Diagnostics.QuietErrors.Once("LoaderCompat.StartLate", e); }
+        }
+
         /// A mount whose collider's parent is unset (a mod copied an unstarted mount's private fields onto a started one):
         /// its freeze scan threw. The parent is the collider's, as FStart sets it. Every started mount has it already.
         [HarmonyLib.HarmonyPatch(typeof(mountStuff), nameof(mountStuff.Scan))]
