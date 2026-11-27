@@ -238,11 +238,28 @@ namespace TLDRevamp
             }
         }
 
-        /// pickupable.cols / cols2: arrays there, lists here.
+        /// pickupable.cols / cols2: arrays there, lists here. A layerScript a mod added itself (AddComponent) is started as
+        /// the game starts its own (layerScript.FStart: its item, its collider, its default layer): the game reads them for
+        /// the item's colliders, and its Pickup threw on one that never started (a mod's nitrous bottle, its model's
+        /// colliders: it could never be picked up, issue 44, 2026-11-27). A/B: StartModLayerScripts = false is before.
+        public static bool StartModLayerScripts = true;
+        public static int ModLayerScriptsStarted;
         public static layerScript[] GetCols(pickupable p) => p != null && p.cols != null ? p.cols.ToArray() : null;
-        public static void SetCols(pickupable p, layerScript[] v) { Calls++; if (p != null) p.cols = v != null ? new List<layerScript>(v) : null; }
+        public static void SetCols(pickupable p, layerScript[] v) { Calls++; if (p != null) p.cols = v != null ? new List<layerScript>(StartLayerScripts(p, v)) : null; }
         public static layerScript[] GetCols2(pickupable p) => p != null && p.cols2 != null ? p.cols2.ToArray() : null;
-        public static void SetCols2(pickupable p, layerScript[] v) { Calls++; if (p != null) p.cols2 = v != null ? new List<layerScript>(v) : null; }
+        public static void SetCols2(pickupable p, layerScript[] v) { Calls++; if (p != null) p.cols2 = v != null ? new List<layerScript>(StartLayerScripts(p, v)) : null; }
+        private static layerScript[] StartLayerScripts(pickupable p, layerScript[] v)
+        {
+            if (!StartModLayerScripts) return v;
+            for (int i = 0; i < v.Length; i++)
+            {
+                var ls = v[i];
+                if (ls == null || ls.started) continue;
+                try { ls.FStart(p, i); ModLayerScriptsStarted++; }
+                catch (System.Exception e) { Diagnostics.QuietErrors.Once("LoaderCompat.StartLayerScripts", e); }
+            }
+            return v;
+        }
 
         /// attachablescript.targetTosave: what it is attached to.
         public static tosaveitemscript TargetTosave(attachablescript a)
@@ -851,12 +868,57 @@ namespace TLDRevamp
             {
                 if (!StartLateAttachables || __instance == null) return;
                 var p = __instance.pickedUp;
-                if (p == null || p.tosave == null) return;
+                if (p == null) return;
+                StartLatePickup(p);
+                if (p.tosave == null) return;
                 var a = p.tosave.attachable;
                 if (a == null || a.started) return;
                 StartLate(a, p.tosave);
             }
         }
+        /// The frame an item is picked up (fpscontroller.Pickup, in the middle of Update) the prefix above had already run:
+        /// the rest of that Update threw once. Started right after the pickup too.
+        [HarmonyLib.HarmonyPatch]
+        private static class StartPickedAttachable
+        {
+            private static IEnumerable<System.Reflection.MethodBase> TargetMethods()
+            {
+                foreach (var m in typeof(fpscontroller).GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic))
+                    if (m.Name == "Pickup" && m.GetParameters().Length >= 1 && m.GetParameters()[0].ParameterType == typeof(pickupable)) yield return m;
+            }
+            private static void Postfix(pickupable __0)
+            {
+                if (!StartLateAttachables || __0 == null) return;
+                StartLatePickup(__0);
+                if (__0.tosave == null) return;
+                var a = __0.tosave.attachable;
+                if (a != null && !a.started) StartLate(a, __0.tosave);
+            }
+        }
+        /// The same for the item's pickup component (pickupable) a mod put in place of the item's own, a copy of another
+        /// item's: it never started (its save, its body, what it hides when stored), and the item's save still named the
+        /// destroyed one (tosave.P), through which the game sets a held item's collision: a mod's nitrous gauge, held, threw
+        /// every frame. The item's save names this one, and it starts as the game starts its own (FStart).
+        public static int LatePickupsStarted;
+        internal static void StartLatePickup(pickupable p)
+        {
+            try
+            {
+                var save = p.tosave != null ? p.tosave : p.GetComponent<tosaveitemscript>();
+                if (save != null && save.P == null) save.P = p;   // destroyed counts as null: the one it named is gone
+                if (!p.started && save != null) { p.FStart(save); LatePickupsStarted++; }
+            }
+            catch (System.Exception e) { Diagnostics.QuietErrors.Once("LoaderCompat.StartLatePickup", e); }
+        }
+
+        /// The game asks CanPickup when the player looks at an item: a mod's late pickup component starts there, so the
+        /// gates of the pickup itself read a started one.
+        [HarmonyLib.HarmonyPatch(typeof(pickupable), nameof(pickupable.CanPickup))]
+        private static class StartLookedPickup
+        {
+            private static void Prefix(pickupable __instance) { if (StartLateAttachables && __instance != null && !__instance.started) StartLatePickup(__instance); }
+        }
+
         internal static void StartLate(attachablescript a, tosaveitemscript save)
         {
             try
