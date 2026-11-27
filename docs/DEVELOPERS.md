@@ -223,6 +223,11 @@ protocol, the interest rules and the byte projections are in [MULTIPLAYER-ARCHIT
   (`attachablescript.FallOFf`, on the machine that simulates the car) can't be mounted and is deleted for everyone 5 s
   later, whoever holds it then; and `partconditionscript.Repair` and a tool's `washtriggerscript.Wash` do nothing.
   Bridge: `mp hardcore [on|off]` (single player: the switch, not saved), `mp hardcore vanish <s>`.
+- **Starting fuel** (`src/TLDRevamp/Fixes/StartingFuel.cs`, on by default): Settings → Revamp → World → *Starting fuel*
+  off removes a new world's start-house barrels of petrol and diesel (three on the beta: 40 L petrol, 40 L and 23 L
+  diesel) right after the house's fixed contents are made (`fixedSpawnScript.FStart` with `useStartCar`, once per world
+  on the host or in single player: the building record's `spawnedFixed`). The other barrels, the jerry cans, the bottle
+  and the start car's tank stay. Bridge: `get TLDRevamp.Fixes.StartingFuel.Last` lists the house's fuel and what went.
 - **Voice to everyone**: holding the *Talk to everyone key* (Settings → Revamp → Multiplayer, **O** by default) sends
   that voice to every player, played without distance like a radio. Session settings → *Voice chat: Everyone hears
   everyone* does the same for every voice in the session.

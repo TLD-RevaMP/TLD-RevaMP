@@ -239,6 +239,10 @@ namespace TLDRevamp
                 "on and is gone a few seconds later. Cleaning tools clean nothing.\n\nIn multiplayer the host's setting " +
                 "counts (Session settings → Hardcore).",
                 () => Net.Hardcore.Own ? 1 : 0, v => Net.Hardcore.SetOwn(v == 1));
+            Toggle("startingFuel", "Starting fuel", 1,
+                "On: a new world's start house has its barrels of petrol and diesel, as in the game. Off: it starts without " +
+                "them. Only when a world is made; a saved world keeps what it has. In multiplayer the host's world counts.",
+                () => Fixes.StartingFuel.On ? 1 : 0, v => Fixes.StartingFuel.On = v == 1);
             Header("Multiplayer",
                 "Voice and text chat with the other players, and what your game allows when you host. Host or join from the game's Multiplayer button (or F11).");
             // the loading screen when joining is always on (2026-11-11: not a choice in the menu)

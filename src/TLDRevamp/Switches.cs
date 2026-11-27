@@ -176,6 +176,7 @@ namespace TLDRevamp
             ("TLDRevamp.Fixes.SleepingWheelSkip.RestSpeed", Kind.OptIn, "Other values tune SleepingWheelSkip.RestSpeed (m/s)."),
             ("TLDRevamp.Fixes.SleepingWheelSkip.RestSpin", Kind.OptIn, "Other values tune SleepingWheelSkip.RestSpin (rad/s)."),
             ("TLDRevamp.Fixes.SleepingWheelSkip.Verify", Kind.OptIn, "true: runs the SleepingWheelSkip verification/comparison path in addition to normal work."),
+            ("TLDRevamp.Fixes.StartingFuel.On", Kind.Config, "false: a new world's start house has no petrol and diesel barrels (Settings → Revamp → World → Starting fuel)."),
             ("TLDRevamp.Fixes.StreamReceiveBudget.BudgetMs", Kind.OptIn, "Other values tune budget ms for StreamReceiveBudget."),
             ("TLDRevamp.Fixes.StreamReceiveBudget.Enabled", Kind.Test, "true: opts into StreamReceiveBudget behavior."),
             ("TLDRevamp.Fixes.TankcapIdle.Enabled", Kind.Test, "true: opts into TankcapIdle behavior."),
