@@ -6,6 +6,7 @@ namespace TLDRevamp.Fixes
     static class GrassCameraThrottle { internal static bool Enabled; internal static int EveryN; }
     static class RenderOptions { internal static float ProbeInterval; internal static int ShadowCascades; internal static bool SmallItemShadows; }
     static class BinocularLensCamera { internal static bool Enabled; }
+    static class StartingFuel { internal static bool On = true; }
     static class DetailedTerrain { public static float DistanceM = 750f; internal static readonly float[] Choices = { 0f, 500f, 750f, 1000f }; internal static void Apply() { } }
     static class RoadPlaceCache { internal static bool Enabled; }
     static class ObjGenFast { internal static bool Enabled; }
